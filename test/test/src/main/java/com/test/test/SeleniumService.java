@@ -46,7 +46,7 @@ public class SeleniumService {
     }
 
     private void testLogin(String username, String password) {
-        driver.get("http://localhost:3000/loginsignup.html");
+        driver.get("http://localhost:2000/loginsignup.html");
         WebElement loginLink = driver.findElement(By.xpath("//a[text()='Login']"));
         loginLink.click();
 
@@ -62,7 +62,7 @@ public class SeleniumService {
         checkForErrorMessage();
 
         String currentUrl = driver.getCurrentUrl();
-        Assert.assertEquals(currentUrl, "http://localhost:3000/donation.html", "Login was not successful.");
+        Assert.assertEquals(currentUrl, "http://localhost:2000/index.html", "Login was not successful.");
     }
 
     private void handleAlert() {

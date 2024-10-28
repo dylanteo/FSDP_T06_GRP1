@@ -2,12 +2,14 @@ package com.test.test;
 
 import com.test.test.SeleniumService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
+@RestController // Use @RestController to directly return JSON responses
+@RequestMapping("/api") // Set a base URL path for all endpoints
+@CrossOrigin(origins = "http://localhost:3000")
 public class TestController {
     @Autowired
     private SeleniumService seleniumService;
@@ -23,10 +25,12 @@ public class TestController {
     }
 
     @GetMapping("/selenium")
-    @ResponseBody
     public String runSeleniumTest(@RequestParam String username, @RequestParam String password) {
-        // Capture the result of the Selenium test
-        String result = seleniumService.runTest(username, password); // Pass the credentials to the Selenium service
-        return result; // Return the result to be printed in the response
+        // Run the Selenium test with the provided username and password
+        return seleniumService.runTest(username, password);
+    }
+    @GetMapping("/react")
+    public String sayHello() {
+        return "Hello from Java backend!";
     }
 }
