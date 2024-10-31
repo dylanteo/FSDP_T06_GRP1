@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 @Controller
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3001")
 public class TestController {
     @Autowired
     private SeleniumService seleniumService;
