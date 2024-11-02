@@ -11,7 +11,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.testng.Assert;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -32,6 +32,7 @@ public class SeleniumService {
 
         driver = new ChromeDriver(options);
     }
+
     private String getRootCauseMessage(Throwable throwable) {
         Throwable cause = throwable;
         while (cause.getCause() != null) {
@@ -75,47 +76,42 @@ public class SeleniumService {
 
         return result;
     }
+
     public String runTest1(String username, String password, DateTimeFormatter formatter) {
         setUp();
-        String result;
-        String testId = UUID.randomUUID().toString(); // Generate unique ID for each test
-
         LocalDateTime startTime = LocalDateTime.now(); // Record start time
         String formattedStartTime = startTime.format(formatter);
+        TestCaseResult result; // Declare result variable
 
         try {
             testLogin(username, password);
             LocalDateTime endTime = LocalDateTime.now(); // Record end time
             String formattedEndTime = endTime.format(formatter);
-            result = "Test ID: " + testId + " - Test completed successfully for username: " + username
-                    + " - Start time: " + formattedStartTime
-                    + ", End time: " + formattedEndTime;
+            result = new TestCaseResult(formattedStartTime, formattedEndTime, true, ""); // Test was successful
         } catch (AssertionError e) {
             LocalDateTime endTime = LocalDateTime.now();
             String formattedEndTime = endTime.format(formatter);
-            result = "Test ID: " + testId + " - Test failed for username: " + username
-                    + " - Start time: " + formattedStartTime
-                    + ", End time: " + formattedEndTime
-                    + " - " + e.getMessage();
+            result = new TestCaseResult(formattedStartTime, formattedEndTime, false, e.getMessage()); // Test failed
         } catch (WebDriverException e) {
             LocalDateTime endTime = LocalDateTime.now();
             String formattedEndTime = endTime.format(formatter);
-            result = "Test ID: " + testId + " - WebDriver error for username: " + username
-                    + " - Start time: " + formattedStartTime
-                    + ", End time: " + formattedEndTime
-                    + " - " + getRootCauseMessage(e);
+            result = new TestCaseResult(formattedStartTime, formattedEndTime, false, getRootCauseMessage(e)); // WebDriver error
         } catch (Exception e) {
             LocalDateTime endTime = LocalDateTime.now();
             String formattedEndTime = endTime.format(formatter);
-            result = "Test ID: " + testId + " - Test encountered an error for username: " + username
-                    + " - Start time: " + formattedStartTime
-                    + ", End time: " + formattedEndTime
-                    + " - " + e.getMessage();
+            result = new TestCaseResult(formattedStartTime, formattedEndTime, false, e.getMessage()); // General error
         } finally {
             tearDown();
         }
 
-        return result;
+        // Convert the result object to JSON
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "{}"; // Return empty JSON object on failure
+        }
     }
 
     private void testLogin(String username, String password) {
@@ -165,6 +161,7 @@ public class SeleniumService {
             driver.quit();
         }
     }
+
     public List<Map<String, String>> readTestDataFromCSV() {
         List<Map<String, String>> testDataList = new ArrayList<>();
 
@@ -189,5 +186,21 @@ public class SeleniumService {
         }
 
         return testDataList;
+    }
+
+    public List<String> runTestsFromLoginTestCases(List<LoginTestCase> testCases) {
+        List<String> results = new ArrayList<>();
+
+        for (LoginTestCase testCase : testCases) {
+            String username = testCase.getUserName();
+            String password = testCase.getPassWord();
+
+            System.out.println("Running test with username: " + username + " and password: " + password);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            String result = runTest1(username, password,formatter); // Reuse existing runTest method
+            results.add(result); // Collect result for each test case
+        }
+
+        return results;
     }
 }

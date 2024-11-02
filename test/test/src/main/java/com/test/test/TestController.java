@@ -15,7 +15,7 @@ import java.util.Map;
 @Controller
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
-@CrossOrigin(origins = "http://localhost:3001")
+@CrossOrigin(origins = "http://localhost:3000")
 public class TestController {
     @Autowired
     private SeleniumService seleniumService;
@@ -40,24 +40,13 @@ public class TestController {
         return "Hello from Java backend!";
     }
 
-    @GetMapping("/run-tests")
-    public List<String> runTests() {
-        List<Map<String, String>> testDataList = new ArrayList<>();
+    @PostMapping("/run-tests")
+    public ResponseEntity<Map<String, Object>> runTests(@RequestBody List<Map<String, String>> testCases) {
+        List<String> results = seleniumService.runTests(testCases); // Pass the test cases to Selenium
+        Map<String, Object> response = new HashMap<>();
+        response.put("results", results);
+        return ResponseEntity.ok(response);
 
-        Map<String, String> data1 = new HashMap<>();
-        data1.put("username", "user1");
-        data1.put("password", "pass1");
-        testDataList.add(data1);
-
-        Map<String, String> data2 = new HashMap<>();
-        data2.put("username", "user2");
-        data2.put("password", "pass2");
-        testDataList.add(data2);
-
-        // Add more test data as needed
-
-        // Run tests and retrieve detailed results
-        return seleniumService.runTests(testDataList);
     }
     @GetMapping("/run-tests1")
     public List<String> runTests1() {
@@ -100,6 +89,42 @@ public class TestController {
         }
 
         return results;
+    }
+    @PostMapping(value = "/run-tests", consumes = "text/csv")
+    public ResponseEntity<List<String>> runTests(@RequestBody String csvData) {
+        List<LoginTestCase> testCases = parseCsvToTestCases(csvData); // Parse CSV to LoginTestCase objects
+        List<String> results = seleniumService.runTestsFromLoginTestCases(testCases); // Run Selenium tests with the parsed cases
+        return ResponseEntity.ok(results); // Return the results
+    }
+
+    private List<LoginTestCase> parseCsvToTestCases(String csvData) {
+        List<LoginTestCase> result = new ArrayList<>();
+        String[] lines = csvData.split("\n");
+
+        // Assuming the first line is the header
+        String[] headers = lines[0].split(",");
+        int userNameIndex = -1;
+        int passWordIndex = -1;
+
+        // Identify the index of userName and passWord
+        for (int i = 0; i < headers.length; i++) {
+            if ("userName".equalsIgnoreCase(headers[i])) {
+                userNameIndex = i;
+            } else if ("passWord".equalsIgnoreCase(headers[i])) {
+                passWordIndex = i;
+            }
+        }
+
+        for (int i = 1; i < lines.length; i++) {
+            String[] values = lines[i].split(",");
+            if (values.length > Math.max(userNameIndex, passWordIndex)) { // Check for index validity
+                String userName = values[userNameIndex];
+                String passWord = values[passWordIndex];
+                LoginTestCase testCase = new LoginTestCase(userName, passWord);
+                result.add(testCase);
+            }
+        }
+        return result;
     }
 
 }
