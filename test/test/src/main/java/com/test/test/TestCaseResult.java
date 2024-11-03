@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 public class TestCaseResult {
-    private String id; // Unique identifier for the test case result
+    private String testCaseId; // Unique identifier for the test case result
     private String startTime; // Start time of the test
     private String endTime; // End time of the test
     private boolean success; // Indicates if the test was successful
@@ -12,7 +12,7 @@ public class TestCaseResult {
 
     // Constructor
     public TestCaseResult(String startTime, String endTime, boolean success, String errorMessage) {
-        this.id = UUID.randomUUID().toString(); // Generate a unique ID
+        this.testCaseId = UUID.randomUUID().toString(); // Generate a unique ID
         this.startTime = startTime;
         this.endTime = endTime;
         this.success = success;
@@ -20,8 +20,8 @@ public class TestCaseResult {
     }
 
     // Getters
-    public String getId() {
-        return id;
+    public String getTestCaseId() {
+        return testCaseId;
     }
 
     public String getStartTime() {

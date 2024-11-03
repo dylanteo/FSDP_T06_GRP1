@@ -32,7 +32,7 @@ const TestResultsTable = ({ testResults }) => {
           {testResults.map((result) => (
             <React.Fragment key={result.id}>
               <tr onClick={() => toggleRowExpansion(result.id)} className="test-row">
-                <td>{result.id}</td>
+                <td>{result.testCaseId}</td>
                 <td>{new Date(result.startTime).toLocaleString()}</td>
                 <td>{new Date(result.endTime).toLocaleString()}</td>
                 <td className={`status-${result.success ? 'passed' : 'failed'}`}>
