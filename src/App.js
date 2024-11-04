@@ -1,8 +1,9 @@
+// App.js
 import React, { useState } from 'react';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
 import TestCaseTable from './components/TestCaseTable';
-import TestResultsTable from './components/TestResultsTable';  // New Test Results Table
+import TestResultsTable from './components/TestResultsTable';
 import './App.css';
 
 function App() {
@@ -58,10 +59,21 @@ function App() {
     return true;
   };
 
+  const handleCsvUpload = (uploadedTestCases) => {
+    setTestCases(uploadedTestCases);
+    localStorage.setItem('uploadedTestCases', JSON.stringify(uploadedTestCases));
+    console.log('CSV data saved to local storage:', uploadedTestCases);
+  };
+
   const runTests = () => {
     console.log('Running tests...');
     console.log('Test Cases:', testCases);
     console.log('Browsers:', selectedBrowsers);
+
+    const savedTestCases = JSON.parse(localStorage.getItem('uploadedTestCases'));
+    console.log('Retrieved test cases from local storage:', savedTestCases);
+
+    alert('Test cases started. Check console for details.');
   };
 
   return (
@@ -76,13 +88,12 @@ function App() {
         </ul>
       </div>
       <div className="content">
-        <div className="header">
-          <button className="btn import">Import via CSV</button>
+        {/* Centered main button section */}
+        <div className="main-buttons">
+          <CsvUploader setTestCases={handleCsvUpload} />
           <button className="btn create">Create Test Case</button>
         </div>
 
-        <CsvUploader setTestCases={setTestCases} />
-        
         {/* Filtering Section */}
         <div className="filters">
           <label>
@@ -110,12 +121,12 @@ function App() {
             <TestCaseTable testCases={testCases.filter(filterTestCases)} />
             <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
             <button className="btn run-tests" onClick={runTests}>
-              Run Tests
+              Start Test Case
             </button>
           </>
         )}
 
-        <TestResultsTable testResults={testResults} /> {/* Updated Test Results Table */}
+        <TestResultsTable testResults={testResults} />
       </div>
     </div>
   );
