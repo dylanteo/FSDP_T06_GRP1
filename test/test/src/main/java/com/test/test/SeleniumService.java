@@ -1,36 +1,47 @@
 package com.test.test;
 
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
-import io.github.bonigarcia.wdm.WebDriverManager;
 import org.testng.Assert;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Duration;
 
 @Service
 public class SeleniumService {
     private WebDriver driver;
+    private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
 
     public void setUp() {
-        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless"); // Run in headless mode
         options.addArguments("--no-sandbox"); // Optional
         options.addArguments("--disable-dev-shm-usage"); // Optional
 
-        driver = new ChromeDriver(options);
+        DesiredCapabilities capabilities = new DesiredCapabilities();
+        capabilities.setCapability(ChromeOptions.CAPABILITY, options);
+
+        try {
+            // Connect to the Grid hub with RemoteWebDriver
+            driver = new RemoteWebDriver(new URL(GRID_URL), capabilities);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("Failed to connect to Selenium Grid at " + GRID_URL, e);
+        }
     }
 
-    public String runTest(String username, String password) {
+    public String runTest(String username) {
         setUp(); // Ensure the driver is set up before running tests
         String result;
 
         try {
-            testLogin(username, password); // Call the testLogin method
+            testLogin(username); // Call the testLogin method with only the username
             result = "Test completed successfully."; // Indicate success
         } catch (AssertionError e) {
             result = "Test failed: " + e.getMessage(); // Capture assertion failures
@@ -45,24 +56,27 @@ public class SeleniumService {
         return result; // Return the result after cleanup
     }
 
-    private void testLogin(String username, String password) {
-        driver.get("http://localhost:2000/loginsignup.html");
-        WebElement loginLink = driver.findElement(By.xpath("//a[text()='Login']"));
+    private void testLogin(String username) {
+        driver.get("https://www.globalsqa.com/angularJs-protractor/BankingProject/#/login");
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        WebElement loginLink = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(@ng-click, 'customer()') and contains(text(), 'Customer Login')]"))
+        );
         loginLink.click();
 
-        WebElement usernameInput = driver.findElement(By.id("loginUsername"));
-        WebElement passwordInput = driver.findElement(By.id("loginPassword"));
-        WebElement loginButton = driver.findElement(By.cssSelector("#loginForm button[type='submit']"));
+        WebElement usernameDropdown = wait.until(ExpectedConditions.elementToBeClickable(
+                By.id("userSelect")));
+        Select selectCustomer = new Select(usernameDropdown);
+        selectCustomer.selectByVisibleText(username);
 
-        usernameInput.sendKeys(username);
-        passwordInput.sendKeys(password);
+        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[text()='Login']")));
         loginButton.click();
 
         handleAlert();
         checkForErrorMessage();
 
         String currentUrl = driver.getCurrentUrl();
-        Assert.assertEquals(currentUrl, "http://localhost:2000/index.html", "Login was not successful.");
+        Assert.assertEquals(currentUrl, "https://www.globalsqa.com/angularJs-protractor/BankingProject/#/account", "Login was not successful.");
     }
 
     private void handleAlert() {
