@@ -2,27 +2,25 @@ import React from 'react';
 import Papa from 'papaparse';
 
 const CsvUploader = ({ setTestCases }) => {
-  const handleFileUpload = (event) => {
+  const handleFileChange = (event) => {
     const file = event.target.files[0];
     if (file) {
       Papa.parse(file, {
         header: true,
-        skipEmptyLines: true,
-        complete: function (result) {
-          const testCases = result.data.map((testCase) => ({
-            ...testCase,
-            priority: testCase.priority || 'Medium', // Default priority if not provided
-            feature: testCase.feature || 'General',  // Default feature if not provided
-          }));
-          setTestCases(testCases);
+        complete: (results) => {
+          console.log(results.data); // Log the parsed data
+          setTestCases(results.data); // Update the test cases state
+        },
+        error: (error) => {
+          console.error('Error parsing CSV:', error);
         },
       });
     }
   };
 
   return (
-    <div className="csv-uploader">
-      <input type="file" accept=".csv" onChange={handleFileUpload} />
+    <div>
+      <input type="file" accept=".csv" onChange={handleFileChange} />
     </div>
   );
 };

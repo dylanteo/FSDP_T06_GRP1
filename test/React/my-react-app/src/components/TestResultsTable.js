@@ -11,6 +11,10 @@ const TestResultsTable = ({ testResults }) => {
     );
   };
 
+  if (!testResults || !Array.isArray(testResults)) {
+    return <div>No test results available.</div>; // Handle no results case
+  }
+
   return (
     <div className="test-results">
       <h2>Test Results</h2>
@@ -18,36 +22,31 @@ const TestResultsTable = ({ testResults }) => {
         <thead>
           <tr>
             <th>ID</th>
-            <th>Test Name</th>
+            <th>Start Time</th>
+            <th>End Time</th>
             <th>Status</th>
-            <th>Started</th>
+            <th>Error Message</th>
           </tr>
         </thead>
         <tbody>
           {testResults.map((result) => (
             <React.Fragment key={result.id}>
               <tr onClick={() => toggleRowExpansion(result.id)} className="test-row">
-                <td>{result.id}</td>
-                <td>{result.name}</td>
-                <td className={`status-${result.status.toLowerCase()}`}>{result.status}</td>
-                <td>{result.started}</td>
+                <td>{result.testCaseId}</td>
+                <td>{new Date(result.startTime).toLocaleString()}</td>
+                <td>{new Date(result.endTime).toLocaleString()}</td>
+                <td className={`status-${result.success ? 'passed' : 'failed'}`}>
+                  {result.success ? 'Passed' : 'Failed'}
+                </td>
+                {/* Optional: Display the error message here as well */}
+                <td>{!result.success && result.errorMessage ? 'View Error' : 'No Error'}</td>
               </tr>
-              {expandedRows.includes(result.id) && (
+              {expandedRows.includes(result.id) && !result.success && result.errorMessage && (
                 <tr className="expanded-row">
-                  <td colSpan={4}>
+                  <td colSpan={5}>
                     <div className="test-details">
-                      <strong>Logs:</strong>
-                      <p>{result.logs}</p>
-                      {result.errors.length > 0 && (
-                        <>
-                          <strong>Errors:</strong>
-                          <ul>
-                            {result.errors.map((error, index) => (
-                              <li key={index}>{error}</li>
-                            ))}
-                          </ul>
-                        </>
-                      )}
+                      <strong>Error Message:</strong>
+                      <p>{result.errorMessage}</p>
                     </div>
                   </td>
                 </tr>

@@ -2,39 +2,14 @@ import React, { useState } from 'react';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
 import TestCaseTable from './components/TestCaseTable';
-import TestResultsTable from './components/TestResultsTable';  // New Test Results Table
-import './App.css';
-import LoginForm from "./loginform";
+import TestResultsTable from './components/TestResultsTable'; // New Test Results Table
+import './css/App.css';
+
 
 function App() {
   const [testCases, setTestCases] = useState([]);
   const [selectedBrowsers, setSelectedBrowsers] = useState([]);
-  const [testResults, setTestResults] = useState([
-    {
-      id: 1,
-      name: 'Test Login Flow',
-      status: 'Passed',
-      started: '10:15 AM',
-      logs: 'Login Flow executed successfully.',
-      errors: [],
-    },
-    {
-      id: 2,
-      name: 'Test Register Flow',
-      status: 'Failed',
-      started: '10:30 AM',
-      logs: 'Registration Flow encountered an issue.',
-      errors: ['Email validation failed', 'Password too weak'],
-    },
-    {
-      id: 3,
-      name: 'Check Register Flow as Tester',
-      status: 'Running',
-      started: '11:00 AM',
-      logs: 'Test is still running...',
-      errors: [],
-    },
-  ]);
+  const [testResults, setTestResults] = useState([]); // Initialize empty state for test results
 
   const [filters, setFilters] = useState({
     priority: 'All',
@@ -59,10 +34,60 @@ function App() {
     return true;
   };
 
-  const runTests = () => {
+  const runTests = async () => {
     console.log('Running tests...');
     console.log('Test Cases:', testCases);
     console.log('Browsers:', selectedBrowsers);
+
+    // Prepare the CSV data
+    const csvHeader = "username,password\n"; // Change the header according to your test case fields
+    const csvRows = testCases.map(tc => `${tc.username},${tc.password}`).join("\n"); // Map your test cases accordingly
+    const csvData = csvHeader + csvRows;
+
+    try {
+      const response = await fetch('http://localhost:8080/api/run-tests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/csv', // Set content type to CSV
+        },
+        body: csvData, // Send the CSV data
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text(); // Expecting text response for CSV
+      console.log('Response:', data);
+
+      // Parse the JSON response
+      const resultsArray = JSON.parse(data);
+
+      // Map results to an array of objects
+      const parsedResults = resultsArray.map((result, index) => {
+        const { testCaseId, startTime, endTime, success, errorMessage } = JSON.parse(result);
+        return {
+          testCaseId: testCaseId || `TestCase ${index + 1}`,
+          startTime: startTime || 'N/A',
+          endTime: endTime || 'N/A',
+          success: success || false,
+          errorMessage: errorMessage || 'No errors',
+        };
+      });
+
+      // Update the testResults state with the parsed results
+          await fetch('http://localhost:5000/api/test-results', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(parsedResults),
+          });
+      setTestResults(parsedResults);
+
+    } catch (error) {
+      console.error('Error running tests:', error);
+    }
   };
 
   return (
@@ -117,11 +142,10 @@ function App() {
         )}
 
         <TestResultsTable testResults={testResults} /> {/* Updated Test Results Table */}
-        <LoginForm />
       </div>
     </div>
-
   );
 }
 
 export default App;
+
