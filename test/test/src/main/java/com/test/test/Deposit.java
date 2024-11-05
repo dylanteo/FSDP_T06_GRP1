@@ -10,16 +10,17 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
+import java.math.BigDecimal;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
 
 @Service
-public class SeleniumService {
-    private WebDriver driver;
+public class Deposit {
+    private static WebDriver driver;
     private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
 
-    public void setUp() {
+    public static void setUp() {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless"); // Run in headless mode
         options.addArguments("--no-sandbox"); // Optional
@@ -36,12 +37,12 @@ public class SeleniumService {
         }
     }
 
-    public String runLogin() {
+    public static String runDeposit() {
         setUp(); // Ensure the driver is set up before running tests
         String result;
 
         try {
-            testLogin(); // Call the testLogin method with only the username
+            deposit(); // Call the testLogin method with only the username
             result = "Test completed successfully."; // Indicate success
         } catch (AssertionError e) {
             result = "Test failed: " + e.getMessage(); // Capture assertion failures
@@ -56,7 +57,7 @@ public class SeleniumService {
         return result; // Return the result after cleanup
     }
 
-    private void testLogin() {
+    private static void deposit() {
         driver.get("https://www.globalsqa.com/angularJs-protractor/BankingProject/#/login");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
         WebElement loginLink = wait.until(ExpectedConditions.elementToBeClickable(
@@ -72,14 +73,40 @@ public class SeleniumService {
         WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[text()='Login']")));
         loginButton.click();
 
+        WebElement depositLink = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[contains(@ng-click, 'deposit()') and contains(text(), 'Deposit')]"))
+        );
+        depositLink.click();
+
+
+        WebElement amountInput = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                By.xpath("//form[contains(@ng-submit, 'deposit()')]//input[@placeholder='amount']")
+        ));
+
+        amountInput.sendKeys(String.valueOf(100));
+
+        WebElement depositButton = wait.until(ExpectedConditions.elementToBeClickable(
+                By.xpath("//button[text()='Deposit']"))
+        );
+        depositButton.click();
+
         handleAlert();
         checkForErrorMessage();
 
-        String currentUrl = driver.getCurrentUrl();
-        Assert.assertEquals(currentUrl, "https://www.globalsqa.com/angularJs-protractor/BankingProject/#/account", "Login was not successful.");
+        try {
+            // Wait until the success message is visible
+            WebElement successMessage = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                    By.xpath("//span[text()='Deposit Successful' and @ng-show='message']")));
+
+            // Verify that the message text is as expected
+            Assert.assertEquals(successMessage.getText(), "Deposit Successful", "Deposit was not successful.");
+            System.out.println("Deposit was successful, and the message is displayed.");
+        } catch (TimeoutException e) {
+            Assert.fail("Deposit success message was not displayed.");
+        }
     }
 
-    private void handleAlert() {
+    private static void handleAlert() {
         try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
             wait.until(ExpectedConditions.alertIsPresent());
@@ -92,7 +119,7 @@ public class SeleniumService {
         }
     }
 
-    private void checkForErrorMessage() {
+    private static void checkForErrorMessage() {
         try {
             WebElement errorMessage = driver.findElement(By.cssSelector(".error-message")); // Adjust the selector
             String errorText = errorMessage.getText();
@@ -105,7 +132,7 @@ public class SeleniumService {
         }
     }
 
-    public void tearDown() {
+    public static void tearDown() {
         if (driver != null) {
             driver.quit();
         }

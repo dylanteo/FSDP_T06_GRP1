@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import com.test.test.Deposit;
 
 @Controller
 @RestController // Use @RestController to directly return JSON responses
@@ -30,8 +31,13 @@ public class TestController {
         return seleniumService.runTest(username);
     }*/
     @GetMapping("/testinglogin")
-    public String test(@RequestParam String username){
-        return seleniumService.runTest(username);
+    public String test(){
+        return seleniumService.runLogin();
+    }
+
+    @GetMapping("/testingdeposit")
+    public String deposit(){
+        return Deposit.runDeposit();
     }
     @GetMapping("/react")
     public String sayHello() {
