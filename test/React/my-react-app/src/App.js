@@ -34,61 +34,60 @@ function App() {
     return true;
   };
 
-  const runTests = async () => {
-    console.log('Running tests...');
-    console.log('Test Cases:', testCases);
-    console.log('Browsers:', selectedBrowsers);
+const runTests = async () => {
+  console.log('Running tests...');
+  console.log('Test Cases:', testCases);
+  console.log('Browsers:', selectedBrowsers);
 
-    // Prepare the CSV data
-    const csvHeader = "username,password\n"; // Change the header according to your test case fields
-    const csvRows = testCases.map(tc => `${tc.username},${tc.password}`).join("\n"); // Map your test cases accordingly
-    const csvData = csvHeader + csvRows;
+  // Convert test cases to JSON format if the server expects JSON
+  const testCasesData = testCases.map(tc => ({
+    username: tc.username,
+    password: tc.password
+  }));
+console.log("testcasedata",testCasesData);
+  try {
+    const response = await fetch('http://localhost:8080/api/testinglogin1', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json', // Set content type to JSON
+      },
+      body: JSON.stringify(testCasesData), // Send the JSON data
+    });
 
-    try {
-      const response = await fetch('http://localhost:8080/api/run-tests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'text/csv', // Set content type to CSV
-        },
-        body: csvData, // Send the CSV data
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.text(); // Expecting text response for CSV
-      console.log('Response:', data);
-
-      // Parse the JSON response
-      const resultsArray = JSON.parse(data);
-
-      // Map results to an array of objects
-      const parsedResults = resultsArray.map((result, index) => {
-        const { testCaseId, startTime, endTime, success, errorMessage } = JSON.parse(result);
-        return {
-          testCaseId: testCaseId || `TestCase ${index + 1}`,
-          startTime: startTime || 'N/A',
-          endTime: endTime || 'N/A',
-          success: success || false,
-          errorMessage: errorMessage || 'No errors',
-        };
-      });
-
-      // Update the testResults state with the parsed results
-          await fetch('http://localhost:5000/api/test-results', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(parsedResults),
-          });
-      setTestResults(parsedResults);
-
-    } catch (error) {
-      console.error('Error running tests:', error);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  };
+
+    const data = await response.text();
+    console.log('Response:', data);
+
+    const resultsArray = JSON.parse(data);
+    const parsedResults = resultsArray.map((result, index) => {
+      const { testCaseId, startTime, endTime, success, errorMessage } = result;
+      return {
+        testCaseId: testCaseId || `TestCase ${index + 1}`,
+        startTime: startTime || 'N/A',
+        endTime: endTime || 'N/A',
+        success: success || false,
+        errorMessage: errorMessage || 'No errors',
+      };
+    });
+
+    await fetch('http://localhost:5000/api/test-results', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(parsedResults),
+    });
+
+    setTestResults(parsedResults);
+  } catch (error) {
+    console.error('Error running tests:', error);
+  }
+};
+
+
 
   return (
     <div className="App">

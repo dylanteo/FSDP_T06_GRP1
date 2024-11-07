@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Controller
 @RestController // Use @RestController to directly return JSON responses
@@ -41,4 +43,28 @@ public class TestController {
     public String sayHello() {
         return "Hello from Java backend!";
     }
+
+
+    @PostMapping("/testinglogin1")
+    public ResponseEntity<List<TestCaseResult>> testLogin(@RequestBody List<LoginTestCase> loginRequests) {
+        // Create a list to store results
+        List<TestCaseResult> results = new ArrayList<>();
+        System.out.println("testing start" );
+
+        // Process each loginRequest
+        for (LoginTestCase loginRequest : loginRequests) {
+            System.out.println("Received username: " + loginRequest.getUserName());
+            System.out.println("Received password: " + loginRequest.getPassWord());
+
+            // Run the login test and collect the result
+            TestCaseResult result = Login.runLogin1(loginRequest.getUserName(), loginRequest.getPassWord());
+
+            // Add the result to the list
+            results.add(result);
+        }
+
+        // Return the list as JSON
+        return ResponseEntity.ok(results);
+    }
+
 }

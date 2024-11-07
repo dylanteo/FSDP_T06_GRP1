@@ -39,4 +39,22 @@ public class TestCaseResult {
     public String getErrorMessage() {
         return errorMessage;
     }
+    @Override
+    public String toString() {
+        // Use StringBuilder to build the JSON array string
+        StringBuilder result = new StringBuilder("[");
+
+        result.append("{")
+                .append("\"testCaseId\":\"").append(testCaseId).append("\",")
+                .append("\"startTime\":\"").append(startTime).append("\",")
+                .append("\"endTime\":\"").append(endTime).append("\",")
+                .append("\"success\":").append(success).append(",")
+                .append("\"errorMessage\":\"").append(errorMessage != null ? errorMessage : "null").append("\"")
+                .append("}");
+
+        result.append("]"); // Close the array
+        return result.toString();
+    }
+
+
 }

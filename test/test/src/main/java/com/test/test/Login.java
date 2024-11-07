@@ -9,6 +9,7 @@ import org.testng.Assert;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.LocalDateTime;
 
 @Service
 public class Login {
@@ -38,7 +39,6 @@ public class Login {
             throw new RuntimeException("Failed to connect to Selenium Grid at " + GRID_URL, e);
         }
     }*/
-
     public static String runLogin(String username, String password) {
         seleniumService.setUp();
         driver = seleniumService.getDriver();
@@ -58,6 +58,55 @@ public class Login {
         }
 
         return result; // Return the result after cleanup
+    }
+
+
+    public static TestCaseResult runLogin1(String username, String password) {
+        seleniumService.setUp();
+        driver = seleniumService.getDriver();
+        String result;
+        String startTime = LocalDateTime.now().toString();
+        String endTime = null;
+        boolean success = false;
+        String errorMessage = null;
+
+        try {
+            // Check if username and password are null
+            if (username == null || password == null) {
+                throw new IllegalArgumentException("Username or Password cannot be null");
+            }
+
+            // Login using the provided credentials
+            login(username, password);  // Assuming login sends the username and password
+
+            endTime = LocalDateTime.now().toString();
+            success = true;  // Indicate success if no exceptions occurred
+            result = "Test completed successfully.";  // Set result as success message
+        } catch (IllegalArgumentException e) {
+            endTime = LocalDateTime.now().toString();
+            errorMessage = "Test failed: " + e.getMessage();  // Handle null input error
+            result = errorMessage;
+        } catch (AssertionError e) {
+            endTime = LocalDateTime.now().toString();
+            errorMessage = "Test failed: " + e.getMessage();  // Capture assertion failures
+            result = errorMessage;
+        } catch (WebDriverException e) {
+            endTime = LocalDateTime.now().toString();
+            errorMessage = "WebDriver error: " + e.getMessage();  // Capture WebDriver-specific errors
+            result = errorMessage;
+        } catch (Exception e) {
+            endTime = LocalDateTime.now().toString();
+            errorMessage = "Test encountered an error: " + e.getMessage();  // Capture other exceptions
+            result = errorMessage;
+        } finally {
+            seleniumService.tearDown();  // Ensure teardown happens regardless of test success
+        }
+
+        // Create a TestCaseResult object with the gathered data
+        TestCaseResult testCaseResult = new TestCaseResult(startTime, endTime, success, errorMessage);
+
+        // Return the string representation of the TestCaseResult object
+        return testCaseResult;
     }
 
     private static void login(String username, String password) {
