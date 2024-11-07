@@ -10,8 +10,11 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:3000") // or "*"
-                .allowedMethods("GET", "POST", "PUT", "DELETE");
+
+        registry.addMapping("/**") // Apply to all paths
+                .allowedOrigins("https://www.globalsqa.com") // Allow the GlobalsQA domain
+                .allowedMethods("GET", "POST", "PUT", "DELETE") // Allowed methods
+                .allowCredentials(true); // If needed for cookie-based authentication
+
     }
 }
