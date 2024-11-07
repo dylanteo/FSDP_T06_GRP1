@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class WebController {
     @RequestMapping(value = "/{path:[^\\.]*}")
     public String redirect() {
-        return "forward:/index.html";
+        return "forward:/angularJs-protractor/BankingProject/#/login";
     }
 }

@@ -2,18 +2,28 @@ package com.test.test;
 
 import com.opencsv.CSVReader;
 import org.openqa.selenium.*;
+
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.chrome.ChromeDriver;
+
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.remote.DesiredCapabilities;
+import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
-import io.github.bonigarcia.wdm.WebDriverManager;
 import org.testng.Assert;
+
+
+import java.net.MalformedURLException;
+import java.net.URL;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -21,120 +31,31 @@ import java.util.*;
 
 @Service
 public class SeleniumService {
-    private WebDriver driver;
+    WebDriver driver;
+    private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
 
     public void setUp() {
-        WebDriverManager.chromedriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless");
         options.addArguments("--no-sandbox");
         options.addArguments("--disable-dev-shm-usage");
 
-        driver = new ChromeDriver(options);
-    }
 
-    private String getRootCauseMessage(Throwable throwable) {
-        Throwable cause = throwable;
-        while (cause.getCause() != null) {
-            cause = cause.getCause();
-        }
-        return cause.getMessage();
-    }
-
-    public List<String> runTests(List<Map<String, String>> testDataList) {
-        List<String> results = new ArrayList<>();
-
-        for (Map<String, String> data : testDataList) {
-            String username = data.get("username");
-            String password = data.get("password");
-
-            System.out.println("Running test with username: " + username + " and password: " + password);
-
-            String result = runTest(username, password);
-            results.add(result); // Collect result for each test case
-        }
-
-        return results;
-    }
-
-    public String runTest(String username, String password) {
-        setUp();
-        String result;
+        DesiredCapabilities capabilities = new DesiredCapabilities();
+        capabilities.setCapability(ChromeOptions.CAPABILITY, options);
 
         try {
-            testLogin(username, password);
-            result = "Test completed successfully for username: " + username;
-        } catch (AssertionError e) {
-            result = "Test failed for username: " + username + " - " + e.getMessage();
-        } catch (WebDriverException e) {
-            result = "WebDriver error for username: " + username + " - " + e.getMessage();
-        } catch (Exception e) {
-            result = "Test encountered an error for username: " + username + " - " + e.getMessage();
-        } finally {
-            tearDown();
+            // Connect to the Grid hub with RemoteWebDriver
+            driver = new RemoteWebDriver(new URL(GRID_URL), capabilities);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException("Failed to connect to Selenium Grid at " + GRID_URL, e);
         }
 
-        return result;
     }
 
-    public String runTest1(String username, String password, DateTimeFormatter formatter) {
-        setUp();
-        LocalDateTime startTime = LocalDateTime.now(); // Record start time
-        String formattedStartTime = startTime.format(formatter);
-        TestCaseResult result; // Declare result variable
 
-        try {
-            testLogin(username, password);
-            LocalDateTime endTime = LocalDateTime.now(); // Record end time
-            String formattedEndTime = endTime.format(formatter);
-            result = new TestCaseResult(formattedStartTime, formattedEndTime, true, ""); // Test was successful
-        } catch (AssertionError e) {
-            LocalDateTime endTime = LocalDateTime.now();
-            String formattedEndTime = endTime.format(formatter);
-            result = new TestCaseResult(formattedStartTime, formattedEndTime, false, e.getMessage()); // Test failed
-        } catch (WebDriverException e) {
-            LocalDateTime endTime = LocalDateTime.now();
-            String formattedEndTime = endTime.format(formatter);
-            result = new TestCaseResult(formattedStartTime, formattedEndTime, false, getRootCauseMessage(e)); // WebDriver error
-        } catch (Exception e) {
-            LocalDateTime endTime = LocalDateTime.now();
-            String formattedEndTime = endTime.format(formatter);
-            result = new TestCaseResult(formattedStartTime, formattedEndTime, false, e.getMessage()); // General error
-        } finally {
-            tearDown();
-        }
 
-        // Convert the result object to JSON
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.writeValueAsString(result);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "{}"; // Return empty JSON object on failure
-        }
-    }
-
-    private void testLogin(String username, String password) {
-        driver.get("http://localhost:2000/loginsignup.html");
-        WebElement loginLink = driver.findElement(By.xpath("//a[text()='Login']"));
-        loginLink.click();
-
-        WebElement usernameInput = driver.findElement(By.id("loginUsername"));
-        WebElement passwordInput = driver.findElement(By.id("loginPassword"));
-        WebElement loginButton = driver.findElement(By.cssSelector("#loginForm button[type='submit']"));
-
-        usernameInput.sendKeys(username);
-        passwordInput.sendKeys(password);
-        loginButton.click();
-
-        handleAlert();
-        checkForErrorMessage();
-
-        String currentUrl = driver.getCurrentUrl();
-        Assert.assertEquals(currentUrl, "http://localhost:2000/index.html", "Login was not successful.");
-    }
-
-    private void handleAlert() {
+    void handleAlert() {
         try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
             wait.until(ExpectedConditions.alertIsPresent());
@@ -145,7 +66,7 @@ public class SeleniumService {
         }
     }
 
-    private void checkForErrorMessage() {
+    void checkForErrorMessage() {
         try {
             WebElement errorMessage = driver.findElement(By.cssSelector(".error-message"));
             String errorText = errorMessage.getText();
@@ -156,10 +77,16 @@ public class SeleniumService {
         }
     }
 
-    public void tearDown() {
-        if (driver != null) {
-            driver.quit();
+    public WebDriver getDriver() {
+        if (driver == null) {
+            setUp(); // Initialize the driver if it's not set up yet
         }
+        return driver;
+    }
+
+    public void tearDown() {
+        driver.quit();
+
     }
 
     public List<Map<String, String>> readTestDataFromCSV() {
