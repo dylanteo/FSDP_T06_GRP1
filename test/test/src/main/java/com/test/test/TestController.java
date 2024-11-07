@@ -33,7 +33,7 @@ public class TestController {
         return seleniumService.runTest(username);
     }*/
     @GetMapping("/testinglogin")
-    public String logIn(@RequestParam String username, @RequestParam String password){
+    public String test(@RequestParam String username, @RequestParam String password){
         return Login.runLogin(username, password);
     }
 

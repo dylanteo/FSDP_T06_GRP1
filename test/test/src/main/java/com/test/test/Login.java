@@ -17,7 +17,6 @@ public class Login {
 
     public Login() {
         this.seleniumService = new SeleniumService();
-        this.driver = seleniumService.getDriver();
     }
 
     /*private static WebDriver driver;
@@ -41,6 +40,8 @@ public class Login {
     }*/
 
     public static String runLogin(String username, String password) {
+        seleniumService.setUp();
+        driver = seleniumService.getDriver();
         String result;
 
         try {
