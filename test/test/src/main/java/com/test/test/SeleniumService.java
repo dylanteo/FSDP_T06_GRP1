@@ -16,7 +16,7 @@ import java.time.Duration;
 
 @Service
 public class SeleniumService {
-    private WebDriver driver;
+    WebDriver driver;
     private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
 
     public void setUp() {
@@ -36,50 +36,9 @@ public class SeleniumService {
         }
     }
 
-    public String runLogin() {
-        setUp(); // Ensure the driver is set up before running tests
-        String result;
 
-        try {
-            testLogin(); // Call the testLogin method with only the username
-            result = "Test completed successfully."; // Indicate success
-        } catch (AssertionError e) {
-            result = "Test failed: " + e.getMessage(); // Capture assertion failures
-        } catch (WebDriverException e) {
-            result = "WebDriver error: " + e.getMessage(); // Capture WebDriver-specific errors
-        } catch (Exception e) {
-            result = "Test encountered an error: " + e.getMessage(); // Capture other exceptions
-        } finally {
-            tearDown(); // Ensure the teardown happens regardless of test success
-        }
 
-        return result; // Return the result after cleanup
-    }
-
-    private void testLogin() {
-        driver.get("https://www.globalsqa.com/angularJs-protractor/BankingProject/#/login");
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-        WebElement loginLink = wait.until(ExpectedConditions.elementToBeClickable(
-                By.xpath("//button[contains(@ng-click, 'customer()') and contains(text(), 'Customer Login')]"))
-        );
-        loginLink.click();
-
-        WebElement usernameDropdown = wait.until(ExpectedConditions.elementToBeClickable(
-                By.id("userSelect")));
-        Select selectCustomer = new Select(usernameDropdown);
-        selectCustomer.selectByVisibleText("Harry Potter");
-
-        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//button[text()='Login']")));
-        loginButton.click();
-
-        handleAlert();
-        checkForErrorMessage();
-
-        String currentUrl = driver.getCurrentUrl();
-        Assert.assertEquals(currentUrl, "https://www.globalsqa.com/angularJs-protractor/BankingProject/#/account", "Login was not successful.");
-    }
-
-    private void handleAlert() {
+    void handleAlert() {
         try {
             WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
             wait.until(ExpectedConditions.alertIsPresent());
@@ -92,7 +51,7 @@ public class SeleniumService {
         }
     }
 
-    private void checkForErrorMessage() {
+    void checkForErrorMessage() {
         try {
             WebElement errorMessage = driver.findElement(By.cssSelector(".error-message")); // Adjust the selector
             String errorText = errorMessage.getText();
@@ -103,6 +62,13 @@ public class SeleniumService {
         } catch (NoSuchElementException e) {
             // No error message was present
         }
+    }
+
+    public WebDriver getDriver() {
+        if (driver == null) {
+            setUp(); // Initialize the driver if it's not set up yet
+        }
+        return driver;
     }
 
     public void tearDown() {

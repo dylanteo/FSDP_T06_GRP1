@@ -1,11 +1,13 @@
 package com.test.test;
 
-import com.test.test.SeleniumService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import com.test.test.Deposit;
+
+
+import java.math.BigDecimal;
 
 @Controller
 @RestController // Use @RestController to directly return JSON responses
@@ -31,14 +33,10 @@ public class TestController {
         return seleniumService.runTest(username);
     }*/
     @GetMapping("/testinglogin")
-    public String test(){
-        return seleniumService.runLogin();
+    public String logIn(@RequestParam String username, @RequestParam String password){
+        return Login.runLogin(username, password);
     }
 
-    @GetMapping("/testingdeposit")
-    public String deposit(){
-        return Deposit.runDeposit();
-    }
     @GetMapping("/react")
     public String sayHello() {
         return "Hello from Java backend!";
