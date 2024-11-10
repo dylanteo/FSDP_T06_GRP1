@@ -5,11 +5,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.testng.ITestListener;
+import org.testng.TestListenerAdapter;
 import org.testng.TestNG;
 
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Controller
 @RestController // Use @RestController to directly return JSON responses
@@ -71,25 +76,36 @@ public class TestController {
     @PostMapping("/testinglogin3")
     public ResponseEntity<List<TestCaseResult>> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
         try {
-            // Store the test cases for TestNG execution
-            for (LoginTestCase loginRequest : loginRequests) {
-                System.out.println("Received username: " + loginRequest.getUserName());
-                System.out.println("Received password: " + loginRequest.getPassWord());
-                loginTestCases.add(loginRequest);
-            }
+            // Group test cases by browser
+            Map<String, List<LoginTestCase>> groupedTestCases = loginRequests.stream()
+                    .collect(Collectors.groupingBy(LoginTestCase::getBrowser));
 
-            // Execute TestNG and collect results
-            List<TestCaseResult> testResults = runTestNg();
+            // Store the grouped test cases in a static variable for access by DataProvider
+            LoginTest.setGroupedTestCases(groupedTestCases);
 
-            // Return the results as JSON
-            return ResponseEntity.ok(testResults);
+            // Create a TestNG instance
+            TestNG testng = new TestNG();
 
+            // Add the TestResultListener to the TestNG suite
+            TestResultListener resultListener = new TestResultListener();
+            testng.addListener((ITestListener) resultListener); // Register the listener
+
+            // Set the TestNG XML suite (make sure the path is correct)
+            testng.setTestSuites(Collections.singletonList("../FSDP_T06_GRP1/test/test/testng.xml"));
+
+            // Run the tests
+            testng.run();
+
+            // Retrieve the test results
+            List<TestCaseResult> results = TestResultListener.getTestCaseResults();
+
+            // Return the test results in the response
+            return ResponseEntity.ok(results);
         } catch (Exception e) {
             // Return an error response if something goes wrong
-            return null;
+            return ResponseEntity.status(500).body(null);
         }
     }
-
     // Trigger TestNG programmatically
     private List<TestCaseResult> runTestNg() {
         List<TestCaseResult> testResults = new ArrayList<>();

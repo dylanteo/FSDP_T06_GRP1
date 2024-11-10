@@ -4,47 +4,41 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 public class LoginTest {
+    private static Map<String, List<LoginTestCase>> groupedTestCases = new HashMap<>();
+
+    public static void setGroupedTestCases(Map<String, List<LoginTestCase>> testCases) {
+        groupedTestCases = testCases;
+    }
+
+    public static Map<String, List<LoginTestCase>> getGroupedTestCases() {
+        return groupedTestCases;
+    }
 
     // Define a DataProvider that supplies test data
     @DataProvider(name = "loginDataProvider")
-    public Object[][] loginDataProvider() {
-        // Here we call the backend to get the latest test cases
-        List<LoginTestCase> loginTestCases = getLoginTestCasesFromBackend();
+    public static Object[][] loginDataProvider() {
+        // Retrieve the grouped test cases from the static method
+        Map<String, List<LoginTestCase>> groupedTestCases = LoginTest.getGroupedTestCases();
 
-        // Convert the list to a 2D array required by TestNG DataProvider
-        Object[][] data = new Object[loginTestCases.size()][3];
+        // Create a 2D array to pass to the DataProvider
+        List<Object[]> data = new ArrayList<>();
 
-        // Fill the data array with the test case data
-        for (int i = 0; i < loginTestCases.size(); i++) {
-            LoginTestCase testCase = loginTestCases.get(i);
-            data[i][0] = testCase.getUserName();  // username
-            data[i][1] = testCase.getPassWord();  // password
-            data[i][2] = testCase.getBrowser();   // browser
+        // Populate the data array with test cases for each browser
+        for (Map.Entry<String, List<LoginTestCase>> entry : groupedTestCases.entrySet()) {
+            String browser = entry.getKey();
+            for (LoginTestCase testCase : entry.getValue()) {
+                data.add(new Object[]{testCase.getUserName(), testCase.getPassWord(), browser});
+            }
         }
 
-        return data;
+        // Convert to 2D array (required by TestNG DataProvider)
+        return data.toArray(new Object[0][0]);
     }
 
-    // Fetch login test cases from the backend (mocked here for simplicity)
-    private List<LoginTestCase> getLoginTestCasesFromBackend() {
-        // You can replace this with a call to the Spring Boot API to fetch data
-        // For example, using RestTemplate to make a call to your backend:
-
-        // Mocking data here for demonstration purposes
-        List<LoginTestCase> testCases = new ArrayList<>();
-        testCases.add(new LoginTestCase("user1", "password1", "chrome"));
-        testCases.add(new LoginTestCase("user2", "password2", "firefox"));
-        testCases.add(new LoginTestCase("user3", "password3", "edge"));
-        // Fetch real data from backend if needed
-        return testCases;
-    }
-
-    // Use the DataProvider in your test method
+    // The test method
     @Test(dataProvider = "loginDataProvider")
     public void testLogin(String username, String password, String browser) {
         System.out.println("Running login test with the following data:");
@@ -78,10 +72,5 @@ public class LoginTest {
         System.out.println("End Time: " + endTime);
         System.out.println("Success: " + success);
         System.out.println("Error Message: " + errorMessage);
-
-        // Return the TestCaseResult object with details of the test execution
-        // This will be used in the controller to collect all results
-        //return new TestCaseResult(startTime, endTime, success, errorMessage);
     }
-
 }
