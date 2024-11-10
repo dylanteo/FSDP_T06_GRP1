@@ -42,11 +42,12 @@ const runTests = async () => {
   // Convert test cases to JSON format if the server expects JSON
   const testCasesData = testCases.map(tc => ({
     username: tc.username,
-    password: tc.password
+    password: tc.password,
+    browser: tc.browser
   }));
 console.log("testcasedata",testCasesData);
   try {
-    const response = await fetch('http://localhost:8080/api/testinglogin1', {
+    const response = await fetch('http://localhost:8080/api/testinglogin3', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json', // Set content type to JSON
