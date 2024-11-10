@@ -18,6 +18,7 @@ import java.util.List;
 public class TestController {
     @Autowired
     private SeleniumService seleniumService;
+    private static List<TestCaseResult> testResults = new ArrayList<>();
     private static List<LoginTestCase> loginTestCases = new ArrayList<>();
 
     @GetMapping("/hello")
@@ -68,52 +69,50 @@ public class TestController {
         return ResponseEntity.ok(results);
     }
     @PostMapping("/testinglogin3")
-    public ResponseEntity<String> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
+    public ResponseEntity<List<TestCaseResult>> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
         try {
-            // Process the login requests (store them for TestNG execution)
+            // Store the test cases for TestNG execution
             for (LoginTestCase loginRequest : loginRequests) {
                 System.out.println("Received username: " + loginRequest.getUserName());
                 System.out.println("Received password: " + loginRequest.getPassWord());
-
-                // Optionally, run some initial tests (if needed)
-                // TestCaseResult result = Login.runLogin1(loginRequest.getUserName(), loginRequest.getPassWord(), "chrome");
-
-                // Add the test cases to the list for TestNG execution
                 loginTestCases.add(loginRequest);
             }
 
-            // Trigger TestNG execution after storing the test cases
-            runTestNg();
+            // Execute TestNG and collect results
+            List<TestCaseResult> testResults = runTestNg();
 
-            // Return success response
-            return ResponseEntity.ok("TestNG tests executed successfully!");
+            // Return the results as JSON
+            return ResponseEntity.ok(testResults);
 
         } catch (Exception e) {
             // Return an error response if something goes wrong
-            return ResponseEntity.status(500).body("Error running TestNG tests: " + e.getMessage());
+            return null;
         }
     }
 
     // Trigger TestNG programmatically
-    private void runTestNg() {
+    private List<TestCaseResult> runTestNg() {
+        List<TestCaseResult> testResults = new ArrayList<>();
+
         try {
             // Create a TestNG instance
             TestNG testng = new TestNG();
 
-            // Optionally, generate a dynamic testng.xml (if necessary) or configure TestNG directly
-
-            // For simplicity, we use an in-memory DataProvider or a testng.xml
-            String testNgXmlPath = "../FSDP_T06_GRP1/test/test/testng.xml";  // Adjust the path accordingly
-
-            // Add the testng.xml file or configure test classes directly
-            testng.setTestSuites(List.of(testNgXmlPath));
+            // Add the test cases from `loginTestCases` list
+            for (LoginTestCase loginRequest : loginTestCases) {
+                TestCaseResult result = Login.runLogin1(loginRequest.getUserName(), loginRequest.getPassWord(), loginRequest.getBrowser());
+                testResults.add(result); // Collect the test result
+            }
 
             // Run the tests
             testng.run();
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        return testResults;
     }
+
 
     // Method to retrieve test cases for TestNG (used in your TestNG DataProvider)
     public static List<LoginTestCase> getLoginTestCases() {
