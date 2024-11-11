@@ -4,6 +4,7 @@ import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
@@ -12,9 +13,10 @@ import java.time.Duration;
 
 @Service
 public class Login {
-    private static SeleniumService seleniumService;
-    private static WebDriver driver;
+    private SeleniumService seleniumService;
+    private WebDriver driver;
 
+    @Autowired
     public Login() {
         this.seleniumService = new SeleniumService();
     }
@@ -39,7 +41,7 @@ public class Login {
         }
     }*/
 
-    public static String runLogin(String username, String password) {
+    public String runLogin(String username, String password) {
         seleniumService.setUp();
         driver = seleniumService.getDriver();
         String result;
@@ -60,7 +62,7 @@ public class Login {
         return result; // Return the result after cleanup
     }
 
-    private static void login(String username, String password) {
+    private void login(String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
