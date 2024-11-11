@@ -22,7 +22,10 @@ public class LoginTest {
     public static Object[][] loginDataProvider() {
         // Retrieve the grouped test cases from the static method
         Map<String, List<LoginTestCase>> groupedTestCases = LoginTest.getGroupedTestCases();
-
+        System.out.println("Grouped Test Cases Size: " + groupedTestCases.size());
+        groupedTestCases.forEach((browser, testCases) ->
+                System.out.println("Browser: " + browser + ", Test Cases Count: " + testCases.size())
+        );
         // Create a 2D array to pass to the DataProvider
         List<Object[]> data = new ArrayList<>();
 

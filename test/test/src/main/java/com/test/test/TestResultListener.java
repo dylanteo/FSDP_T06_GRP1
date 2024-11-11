@@ -6,6 +6,8 @@ import org.testng.ITestResult;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -53,13 +55,27 @@ public class TestResultListener implements ITestListener {
 
     // Helper method to create a TestCaseResult object
     private TestCaseResult createTestCaseResult(ITestResult result, boolean success, String errorMessage) {
-        String startTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(result.getStartMillis()), java.time.ZoneId.systemDefault()).toString();
-        String endTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(result.getEndMillis()), java.time.ZoneId.systemDefault()).toString();
-        return new TestCaseResult(startTime, endTime, success, errorMessage);
+        // Convert the start and end milliseconds to Instant, then to LocalDateTime
+        LocalDateTime startTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(result.getStartMillis()), ZoneId.systemDefault());
+        LocalDateTime endTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(result.getEndMillis()), ZoneId.systemDefault());
+
+        // Define the desired format (e.g., "yyyy-MM-dd HH:mm:ss")
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        // Format the LocalDateTime into a string representation
+        String formattedStartTime = startTime.format(formatter);
+        String formattedEndTime = endTime.format(formatter);
+
+        // Create and return the TestCaseResult object with formatted times
+        return new TestCaseResult(formattedStartTime, formattedEndTime, success, errorMessage);
     }
 
     // Get the captured test case results
     public static List<TestCaseResult> getTestCaseResults() {
         return testCaseResults;
+    }
+    public static void clearResults() {
+        // Clear the stored test results
+        testCaseResults.clear();
     }
 }

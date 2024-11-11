@@ -10,10 +10,7 @@ import org.testng.TestListenerAdapter;
 import org.testng.TestNG;
 
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
@@ -77,6 +74,7 @@ public class TestController {
     public ResponseEntity<List<TestCaseResult>> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
         try {
             // Group test cases by browser
+            resetTestState();
             Map<String, List<LoginTestCase>> groupedTestCases = loginRequests.stream()
                     .collect(Collectors.groupingBy(LoginTestCase::getBrowser));
 
@@ -133,5 +131,11 @@ public class TestController {
     // Method to retrieve test cases for TestNG (used in your TestNG DataProvider)
     public static List<LoginTestCase> getLoginTestCases() {
         return loginTestCases;
+    }
+    private void resetTestState() {
+        // Clear the test results and any stored data
+        TestResultListener.clearResults(); // Assuming you have a method in TestResultListener to clear results
+        LoginTest.setGroupedTestCases(new HashMap<>()); // Reset the grouped test cases
+        testResults.clear(); // Clear the test results list
     }
 }
