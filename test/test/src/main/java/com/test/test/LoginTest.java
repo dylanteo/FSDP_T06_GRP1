@@ -49,31 +49,31 @@ public class LoginTest {
         System.out.println("Password: " + password);
         System.out.println("Browser: " + browser);
 
-        // Record the start time of the test
         String startTime = LocalDateTime.now().toString();
-
-        // Variables to store the success/failure and error message
         boolean success = false;
         String errorMessage = null;
 
         try {
-            // Your login test logic here (using the browser, username, and password)
             String result = Login.runLogin(username, password, browser);
             System.out.println("Test Result: " + result);
-            success = true; // If no exception occurs, the test is successful
+
+            // Check the result to set success based on actual outcome
+            success = result.equalsIgnoreCase("Success"); // Adjust according to expected success criteria
+            if (!success) {
+                errorMessage = "Login failed due to incorrect credentials or other issues.";
+            }
         } catch (Exception e) {
-            errorMessage = e.getMessage(); // Capture any error message if the test fails
+            errorMessage = e.getMessage();
             System.out.println("Error: " + errorMessage);
         }
 
-        // Record the end time of the test
         String endTime = LocalDateTime.now().toString();
 
-        // Print out the results to the console
+        // Output results
         System.out.println("Test Case ID: " + UUID.randomUUID().toString());
         System.out.println("Start Time: " + startTime);
         System.out.println("End Time: " + endTime);
         System.out.println("Success: " + success);
-        System.out.println("Error Message: " + errorMessage);
+        System.out.println("Error Message: " + (errorMessage != null ? errorMessage : "No errors"));
     }
 }

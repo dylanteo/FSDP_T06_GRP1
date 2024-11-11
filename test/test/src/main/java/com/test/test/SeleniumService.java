@@ -39,7 +39,7 @@ public class SeleniumService {
 
         if ("chrome".equalsIgnoreCase(browser)) {
             ChromeOptions chromeOptions = new ChromeOptions();
-            chromeOptions.addArguments("--headless"); // Run in headless mode
+//            chromeOptions.addArguments("--headless"); // Run in headless mode
             chromeOptions.addArguments("--no-sandbox"); // Optional
             chromeOptions.addArguments("--disable-dev-shm-usage"); // Optional
             capabilities.setCapability(ChromeOptions.CAPABILITY, chromeOptions);

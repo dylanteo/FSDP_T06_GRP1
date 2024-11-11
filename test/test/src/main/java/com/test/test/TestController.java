@@ -47,7 +47,23 @@ public class TestController {
     public String sayHello() {
         return "Hello from Java backend!";
     }
+    @GetMapping("/managerLogin")
+    public String managerLogin(){
+        return admin.runBankManagerLogin("chrome");
+    }
+    @GetMapping("/addcustomer")
+    public String addCustomer(){
+        return admin.runAddCustomer("chrome","yes","yes","yes");
+    }
+    @GetMapping("/addcustomer1")
+    public String addCustomer1(){
+        // Run the test twice
+        String result1 = admin.runAddCustomer("chrome", "yes", "yes", "yes");
+        String result2 = admin.runAddCustomer("chrome", "yes", "yes", "yes");
 
+        // Combine the results into a single string
+        return "First run result: " + result1 + "<br>" + "Second run result: " + result2;
+    }
 
     @PostMapping("/testinglogin1")
     public ResponseEntity<List<TestCaseResult>> testLogin(@RequestBody List<LoginTestCase> loginRequests) {
@@ -70,6 +86,7 @@ public class TestController {
         // Return the list as JSON
         return ResponseEntity.ok(results);
     }
+
     @PostMapping("/testinglogin3")
     public ResponseEntity<List<TestCaseResult>> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
         try {

@@ -5,11 +5,11 @@ import TestCaseTable from './components/TestCaseTable';
 import TestResultsTable from './components/TestResultsTable'; // New Test Results Table
 import './css/App.css';
 
-
 function App() {
   const [testCases, setTestCases] = useState([]);
   const [selectedBrowsers, setSelectedBrowsers] = useState([]);
   const [testResults, setTestResults] = useState([]); // Initialize empty state for test results
+  const [loading, setLoading] = useState(false); // New loading state
 
   const [filters, setFilters] = useState({
     priority: 'All',
@@ -34,61 +34,66 @@ function App() {
     return true;
   };
 
-const runTests = async () => {
-  console.log('Running tests...');
-  console.log('Test Cases:', testCases);
-  console.log('Browsers:', selectedBrowsers);
+  const runTests = async () => {
+    console.log('Running tests...');
+    console.log('Test Cases:', testCases);
+    console.log('Browsers:', selectedBrowsers);
 
-  // Convert test cases to JSON format if the server expects JSON
-  const testCasesData = testCases.map(tc => ({
-    username: tc.username,
-    password: tc.password,
-    browser: tc.browser
-  }));
-console.log("testcasedata",testCasesData);
-  try {
-    const response = await fetch('http://localhost:8080/api/testinglogin3', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json', // Set content type to JSON
-      },
-      body: JSON.stringify(testCasesData), // Send the JSON data
-    });
+    // Set loading to true to disable the button
+    setLoading(true);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    // Convert test cases to JSON format if the server expects JSON
+    const testCasesData = testCases.map(tc => ({
+      username: tc.username,
+      password: tc.password,
+      browser: tc.browser
+    }));
+    console.log("testcasedata", testCasesData);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/testinglogin3', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json', // Set content type to JSON
+        },
+        body: JSON.stringify(testCasesData), // Send the JSON data
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text();
+      console.log('Response:', data);
+
+      const resultsArray = JSON.parse(data);
+      const parsedResults = resultsArray.map((result, index) => {
+        const { testCaseId, startTime, endTime, success, errorMessage } = result;
+        return {
+          testCaseId: testCaseId || `TestCase ${index + 1}`,
+          startTime: startTime || 'N/A',
+          endTime: endTime || 'N/A',
+          success: success || false,
+          errorMessage: errorMessage || 'No errors',
+        };
+      });
+
+      await fetch('http://localhost:5000/api/test-results', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(parsedResults),
+      });
+
+      setTestResults(parsedResults);
+    } catch (error) {
+      console.error('Error running tests:', error);
+    } finally {
+      // Set loading to false to re-enable the button
+      setLoading(false);
     }
-
-    const data = await response.text();
-    console.log('Response:', data);
-
-    const resultsArray = JSON.parse(data);
-    const parsedResults = resultsArray.map((result, index) => {
-      const { testCaseId, startTime, endTime, success, errorMessage } = result;
-      return {
-        testCaseId: testCaseId || `TestCase ${index + 1}`,
-        startTime: startTime || 'N/A',
-        endTime: endTime || 'N/A',
-        success: success || false,
-        errorMessage: errorMessage || 'No errors',
-      };
-    });
-
-    await fetch('http://localhost:5000/api/test-results', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(parsedResults),
-    });
-
-    setTestResults(parsedResults);
-  } catch (error) {
-    console.error('Error running tests:', error);
-  }
-};
-
-
+  };
 
   return (
     <div className="App">
@@ -135,8 +140,12 @@ console.log("testcasedata",testCasesData);
           <>
             <TestCaseTable testCases={testCases.filter(filterTestCases)} />
             <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
-            <button className="btn run-tests" onClick={runTests}>
-              Run Tests
+            <button
+              className="btn run-tests"
+              onClick={runTests}
+              disabled={loading} // Disable the button if loading is true
+            >
+              {loading ? 'Running Tests...' : 'Run Tests'}
             </button>
           </>
         )}
@@ -148,4 +157,3 @@ console.log("testcasedata",testCasesData);
 }
 
 export default App;
-
