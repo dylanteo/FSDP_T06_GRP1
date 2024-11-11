@@ -17,6 +17,9 @@ public class TestController {
     @Autowired
     private Register register; // Inject Register service
 
+    @Autowired
+    private OpenAccount openAccount;
+
     @GetMapping("/hello")
     public String hello() {
         return "hello"; // This will look for hello.html in src/main/resources/templates
@@ -40,6 +43,11 @@ public class TestController {
     @GetMapping("/signup")
     public String signup(){
         return register.runRegister("hi", "hi","hi","hi","hi","hi","hi","hi","hi","hi");
+    }
+
+    @GetMapping("/openaccount")
+    public String openaccount(){
+        return openAccount.runOpenNewAccount("test","test", "SAVINGS", "14343");
     }
 
     @GetMapping("/react")

@@ -13,41 +13,21 @@ import java.time.Duration;
 
 @Service
 public class Login {
-    private SeleniumService seleniumService;
-    private WebDriver driver;
+    private final SeleniumService seleniumService;
 
     @Autowired
-    public Login() {
-        this.seleniumService = new SeleniumService();
+    public Login(SeleniumService seleniumService) {
+        this.seleniumService = seleniumService;
     }
 
-    /*private static WebDriver driver;
-    private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
-
-    public static void setUp() {
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless"); // Run in headless mode
-        options.addArguments("--no-sandbox"); // Optional
-        options.addArguments("--disable-dev-shm-usage"); // Optional
-
-        DesiredCapabilities capabilities = new DesiredCapabilities();
-        capabilities.setCapability(ChromeOptions.CAPABILITY, options);
-
-        try {
-            // Connect to the Grid hub with RemoteWebDriver
-            driver = new RemoteWebDriver(new URL(GRID_URL), capabilities);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException("Failed to connect to Selenium Grid at " + GRID_URL, e);
-        }
-    }*/
 
     public String runLogin(String username, String password) {
+        WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
         seleniumService.setUp();
-        driver = seleniumService.getDriver();
         String result;
 
         try {
-            login(username, password); // Call the testLogin method with only the username
+            login(driver, username, password); // Call the testLogin method with only the username
             result = "Test completed successfully."; // Indicate success
         } catch (AssertionError e) {
             result = "Test failed: " + e.getMessage(); // Capture assertion failures
@@ -62,7 +42,7 @@ public class Login {
         return result; // Return the result after cleanup
     }
 
-    private void login(String username, String password) {
+    public void login(WebDriver driver, String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 

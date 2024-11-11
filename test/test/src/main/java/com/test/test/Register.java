@@ -45,7 +45,7 @@ public class Register {
         return result; // Return the result after cleanup
     }
 
-    private void register(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
+    public void register(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
