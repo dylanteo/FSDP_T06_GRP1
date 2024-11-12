@@ -30,18 +30,20 @@ const TestResultsTable = ({ testResults }) => {
         </thead>
         <tbody>
           {testResults.map((result) => (
-            <React.Fragment key={result.id}>
-              <tr onClick={() => toggleRowExpansion(result.id)} className="test-row">
+            <React.Fragment key={result.testCaseId}>
+              {/* Main test case row */}
+              <tr onClick={() => toggleRowExpansion(result.testCaseId)} className="test-row">
                 <td>{result.testCaseId}</td>
                 <td>{new Date(result.startTime).toLocaleString()}</td>
                 <td>{new Date(result.endTime).toLocaleString()}</td>
                 <td className={`status-${result.success ? 'passed' : 'failed'}`}>
                   {result.success ? 'Passed' : 'Failed'}
                 </td>
-                {/* Optional: Display the error message here as well */}
                 <td>{!result.success && result.errorMessage ? 'View Error' : 'No Error'}</td>
               </tr>
-              {expandedRows.includes(result.id) && !result.success && result.errorMessage && (
+
+              {/* Expanded row (only shown when the test failed and error exists) */}
+              {expandedRows.includes(result.testCaseId) && !result.success && result.errorMessage && (
                 <tr className="expanded-row">
                   <td colSpan={5}>
                     <div className="test-details">

@@ -57,6 +57,20 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-api</artifactId>
+			<version>5.7.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>5.7.2</version>
+			<scope>test</scope>
+		</dependency>
+
+
+		<dependency>
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-java</artifactId>
 			<version>4.19.1</version>
@@ -65,9 +79,26 @@
 
 
 
-	</dependencies>
+</dependencies>
 	<build>
 		<plugins>
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.3.1</version>
+				<configuration>
+					<includes>
+						<include>**/*.java</include>
+					</includes>
+					<properties>
+						<configurationParameters>
+							junit.jupiter.execution.parallel.enabled = true
+							junit.jupiter.execution.parallel.mode.default = concurrent
+							junit.jupiter.execution.parallel.config.strategy = fixed
+							junit.jupiter.execution.parallel.config.fixed.parallelism = 4
+						</configurationParameters>
+					</properties>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

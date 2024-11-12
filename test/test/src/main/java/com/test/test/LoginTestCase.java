@@ -1,30 +1,34 @@
 package com.test.test;
 
 public class LoginTestCase {
-    private String userName;
-    private String passWord;
+    private String username;
+    private String password;
+    private String browser;
 
     // Constructor, getters, and setters
 
-    public LoginTestCase(String userName,String passWord) {
-        this.userName = userName;
-        this.passWord = passWord;
+    public LoginTestCase(String username,String password,String browser) {
+        this.username = username;
+        this.password = password;
+        this.browser = browser;
     }
-    public void setUserName(String userName)
+    public void setUserName(String username)
     {
-        this.userName = userName;
+        this.username = username;
     }
-    public void setPassWord(String passWord)
+    public void setPassWord(String password)
     {
-        this.passWord = passWord;
+        this.password = password;
     }
+    public void setBrowser(String browser){this.browser = browser;}
     public String getUserName()
     {
-        return this.userName;
+        return this.username;
     }
     public String getPassWord()
     {
-        return this.passWord;
+        return this.password;
     }
+    public String getBrowser(){return this.browser;}
 
 }
