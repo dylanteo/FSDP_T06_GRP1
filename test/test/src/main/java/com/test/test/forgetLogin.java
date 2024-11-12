@@ -20,7 +20,7 @@ public class forgetLogin {
 
     public static String runForgotLoginInfo(String browser) {
         seleniumService.setUp(browser);
-        WebDriver driver = seleniumService.getDriver(browser);
+        WebDriver driver = seleniumService.getDriver();
         String result;
 
         try {

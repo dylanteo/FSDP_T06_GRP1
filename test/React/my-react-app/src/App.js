@@ -23,6 +23,24 @@ function App() {
       [name]: value,
     }));
   };
+  const runTest1 = async (browser) => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/run-test1?browser=${browser}`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.text();
+      console.log('Test 1 run response:', data);
+      alert('Test 1 run successfully');
+    } catch (error) {
+      console.error('Error running Test 1:', error);
+      alert('Failed to run Test 1');
+    }
+  };
 
   const filterTestCases = (testCase) => {
     if (filters.priority !== 'All' && testCase.priority !== filters.priority) {
@@ -33,7 +51,27 @@ function App() {
     }
     return true;
   };
+  const runTestSuite = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/run-suite', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Test suite run response:', data);
+        alert('Test suite run successfully');
+      } catch (error) {
+        console.error('Error running test suite:', error);
+        alert('Failed to run test suite');
+      }
+    };
   const runTests = async () => {
     console.log('Running tests...');
     console.log('Test Cases:', testCases);
@@ -109,7 +147,11 @@ function App() {
       <div className="content">
         <div className="header">
           <button className="btn import">Import via CSV</button>
-          <button className="btn create">Create Test Case</button>
+          <button className="btn create" onClick={runTestSuite} disabled={loading}>
+            {loading ? 'Running Test Suite...' : 'Create & Run Test Suite'}
+          </button>
+          <button onClick={() => runTest1('chrome')}>Run Test 1</button>
+
         </div>
 
         <CsvUploader setTestCases={setTestCases} />

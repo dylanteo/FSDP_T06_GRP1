@@ -1,134 +1,107 @@
 package com.test.test;
 
-
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.*;
-
-import org.openqa.selenium.WebDriver;
-
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
-
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
-
-
 import org.springframework.stereotype.Service;
 import org.testng.Assert;
+import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Parameters;
 
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
-
 @Service
 public class SeleniumService {
 
+    private static final ThreadLocal<WebDriver> driver = new ThreadLocal<>();
+    private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update as needed
 
-
-    private WebDriver driver;
-    private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
-
-
+    @BeforeMethod
+    @Parameters("browser")
     public void setUp(String browser) {
-        // Set up WebDriverManager to manage the browser drivers
+        DesiredCapabilities capabilities = new DesiredCapabilities();
+
         if ("chrome".equalsIgnoreCase(browser)) {
-            WebDriverManager.chromedriver().setup();  // Automatically download and set up Chrome driver
+            WebDriverManager.chromedriver().setup();
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+            capabilities.setCapability(ChromeOptions.CAPABILITY, options);
         } else if ("firefox".equalsIgnoreCase(browser)) {
-            WebDriverManager.firefoxdriver().driverVersion("0.35.0").setup(); // Automatically download and set up Firefox driver
+            WebDriverManager.firefoxdriver().driverVersion("0.35.0").setup();
+            FirefoxOptions options = new FirefoxOptions();
+            options.addArguments("--headless");
+            capabilities.setCapability(FirefoxOptions.FIREFOX_OPTIONS, options);
         } else if ("edge".equalsIgnoreCase(browser)) {
-            WebDriverManager.edgedriver().setup(); // Automatically download and set up Edge driver
+            WebDriverManager.edgedriver().setup();
+            EdgeOptions options = new EdgeOptions();
+            options.addArguments("--headless");
+            capabilities.setCapability(EdgeOptions.CAPABILITY, options);
         } else {
             throw new IllegalArgumentException("Unsupported browser: " + browser);
         }
 
-        // Set the desired capabilities based on the browser
-        DesiredCapabilities capabilities = new DesiredCapabilities();
-
-        if ("chrome".equalsIgnoreCase(browser)) {
-            ChromeOptions chromeOptions = new ChromeOptions();
-//            chromeOptions.addArguments("--headless"); // Run in headless mode
-            chromeOptions.addArguments("--no-sandbox"); // Optional
-            chromeOptions.addArguments("--disable-dev-shm-usage"); // Optional
-            capabilities.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
-        } else if ("firefox".equalsIgnoreCase(browser)) {
-            FirefoxOptions firefoxOptions = new FirefoxOptions();
-//            firefoxOptions.addArguments("--headless"); // Run Firefox in headless mode
-            capabilities.setCapability(FirefoxOptions.FIREFOX_OPTIONS, firefoxOptions);
-        } else if ("edge".equalsIgnoreCase(browser)) {
-            EdgeOptions edgeOptions = new EdgeOptions();
-//            edgeOptions.addArguments("--headless"); // Run in headless mode
-            capabilities.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
-        }
-
         try {
-            // Connect to the Selenium Grid hub with RemoteWebDriver
-            driver = (new RemoteWebDriver(new URL(GRID_URL), capabilities));
+            driver.set(new RemoteWebDriver(new URL(GRID_URL), capabilities));
         } catch (MalformedURLException e) {
             throw new RuntimeException("Failed to connect to Selenium Grid at " + GRID_URL, e);
         }
     }
 
-    public WebDriver getDriver(String browser) {
-        if (driver == null) {
-            System.out.println("Driver is null, calling setUp...");
-            setUp(browser); // Call setUp if driver is null
-        }
-        return driver;
+    public WebDriver getDriver() {
+        return driver.get();
     }
 
+    @AfterMethod
     public void tearDown() {
-        driver.quit();
-
-    }
-
-    // Handle browser alerts
-    public void handleAlert() {
-        try {
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
-            wait.until(ExpectedConditions.alertIsPresent());
-            Alert alert = driver.switchTo().alert();
-            alert.accept(); // Click "OK"
-        } catch (TimeoutException e) {
-            // Handle timeout
-        } catch (NoAlertPresentException e) {
-            // Handle no alert present
+        if (driver.get() != null) {
+            driver.get().quit();
+            driver.remove();
         }
     }
 
-    // Check for error messages on the page
+    // Example of handling an alert
+    public void handleAlert() {
+        WebDriverWait wait = new WebDriverWait(getDriver(), Duration.ofSeconds(3));
+        try {
+            wait.until(ExpectedConditions.alertIsPresent());
+            Alert alert = getDriver().switchTo().alert();
+            alert.accept();
+        } catch (TimeoutException | NoAlertPresentException e) {
+            // Handle alert not present
+        }
+    }
+
+    // Check for an error message on the page
     public void checkForErrorMessage() {
         try {
-            WebElement errorMessage = getDriver("chrome").findElement(By.cssSelector(".error-message")); // Adjust the selector
+            WebElement errorMessage = getDriver().findElement(By.cssSelector(".error-message")); // Adjust selector
             String errorText = errorMessage.getText();
-            System.out.println("Error message: " + errorText); // Print error message for debugging
-
             Assert.assertNotNull(errorText, "Error message should not be null.");
         } catch (NoSuchElementException e) {
             // No error message was present
         }
     }
 
-    // Wait for the page URL to match the expected one
+    // Wait for a specific URL
     public void waitForPageUrl(String expectedUrl) {
-        WebDriverWait wait = new WebDriverWait(getDriver("chrome"), Duration.ofSeconds(10));
+        WebDriverWait wait = new WebDriverWait(getDriver(), Duration.ofSeconds(10));
         wait.until(ExpectedConditions.urlToBe(expectedUrl));
     }
 
-    // Add custom retry logic in case of intermittent failures
+    // Retry logic for login test
     public void retryLoginTest(int maxRetries) {
         int attempt = 0;
         while (attempt < maxRetries) {
             try {
-                // Assume login logic is here
-                // Example: check for login success or failure
-
-                // Assuming the login page should redirect to the overview page
                 waitForPageUrl("https://parabank.parasoft.com/parabank/overview.htm");
-
-                // If successful, break the loop
                 break;
             } catch (TimeoutException | AssertionError e) {
                 attempt++;

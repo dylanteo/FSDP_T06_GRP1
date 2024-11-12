@@ -6,8 +6,12 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
+import java.sql.Time;
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 public class admin {
 
@@ -18,7 +22,7 @@ public class admin {
         WebDriver driver = driverThreadLocal.get();
         if (driver == null) {
             seleniumService.setUp(browser);  // Pass browser type to SeleniumService
-            driver = seleniumService.getDriver(browser);
+            driver = seleniumService.getDriver();
             driverThreadLocal.set(driver);
         }
         return driver;
@@ -38,41 +42,71 @@ public class admin {
 
     public static String runBankManagerLogin(String browser)
     {
+        String starttime = "";
+        String endtime = "";
+        boolean success = false;
+        String error;
         String result;
         try{
+            starttime = LocalDateTime.now().toString();
             WebDriver driver = getDriver(browser);
+            endtime = LocalDateTime.now().toString();
             bankManagerLogin(driver);
+            success = true;
             result = "test completed";
         }catch (AssertionError e) {
+            //success = false;
             result = "Test failed: " + e.getMessage();
         } catch (WebDriverException e) {
+            //success = false;
             result = "WebDriver error: " + e.getMessage();
         } catch (Exception e) {
+            //success = false;
             result = "Test encountered an error: " + e.getMessage();
         } finally {
             cleanupDriver(); // Use the new cleanup method
-        }
+            seleniumService.tearDown();
 
-        return result;
+        }
+        TestCaseResult tcr = new TestCaseResult(starttime,endtime,success,result);
+        //seleniumService.tearDown();
+        return tcr.toString();
     }
     public static String runAddCustomer(String browser, String firstName, String lastName, String postCode)
     {
+        String starttime = "";
+        String endtime = "";
+        boolean success = false;
+        String error;
         String result;
+        starttime = LocalDateTime.now().toString();
+
         try {
             WebDriver driver = getDriver(browser);
             addAccount(driver, firstName, lastName, postCode);
+            endtime = LocalDateTime.now().toString();
+            success = true;
             result = "test completed";
         } catch (AssertionError e) {
+            //success = false;
             result = "Test failed: " + e.getMessage();
+            endtime = LocalDateTime.now().toString();
         } catch (WebDriverException e) {
+            //success = false;
             result = "WebDriver error: " + e.getMessage();
+            endtime = LocalDateTime.now().toString();
         } catch (Exception e) {
+            //success = false;
             result = "Test encountered an error: " + e.getMessage();
+            endtime = LocalDateTime.now().toString();
         } finally {
             cleanupDriver(); // Ensure proper cleanup of the WebDriver
-        }
+            seleniumService.tearDown();
 
-        return result;
+        }
+        TestCaseResult tcr = new TestCaseResult(starttime,endtime,success,result);
+        //seleniumService.tearDown();
+        return tcr.toString1();
     }
     public static void bankManagerLogin(WebDriver driver)
     {
@@ -178,10 +212,14 @@ public class admin {
         Alert alert1 = wait.until(ExpectedConditions.alertIsPresent());
         String alertMessage1 = alert1.getText();
         System.out.println("Alert Message: " + alertMessage);
-        if(alertMessage1.contains("Account created successfully"))
-        {
-            System.out.println("Success: Account added successfully");
-            alert.accept();
+        if (alertMessage1.contains("Account created successfully with account Number")) {
+            System.out.println("Success: Account created successfully with account number.");
+            alert1.accept();
+        } else {
+            System.out.println("Failure: Account creation failed or unexpected message.");
+            alert1.accept();
         }
+
+        driver.quit();
     }
 }

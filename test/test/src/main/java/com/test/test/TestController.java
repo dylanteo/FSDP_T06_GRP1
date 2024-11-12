@@ -1,6 +1,7 @@
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.testng.ITestListener;
@@ -55,7 +56,7 @@ public class TestController {
     }
     @GetMapping("/testinglogin")
     public String test(){
-        return Login.runLogin("hi", "hi","firefox");
+        return Login.runLogin("hi", "hi","chrome");
     }
 
     @GetMapping("/signup")
@@ -66,8 +67,6 @@ public class TestController {
     @GetMapping("/openaccount")
     public String openaccount(){
         return openAccount.runOpenNewAccount("hi","hi", "SAVINGS", "15120","chrome");
-
-
     }
 
     @GetMapping("/react")
@@ -115,73 +114,95 @@ public class TestController {
 //        return ResponseEntity.ok(results);
 //    }
 
-//    @PostMapping("/testinglogin3")
-//    public ResponseEntity<List<TestCaseResult>> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
-//        try {
-//            // Group test cases by browser
-//            resetTestState();
-//            Map<String, List<LoginTestCase>> groupedTestCases = loginRequests.stream()
-//                    .collect(Collectors.groupingBy(LoginTestCase::getBrowser));
-//
-//            // Store the grouped test cases in a static variable for access by DataProvider
-//            LoginTest.setGroupedTestCases(groupedTestCases);
-//
-//            // Create a TestNG instance
-//            TestNG testng = new TestNG();
-//
-//            // Add the TestResultListener to the TestNG suite
-//            TestResultListener resultListener = new TestResultListener();
-//            testng.addListener((ITestListener) resultListener); // Register the listener
-//
-//            // Set the TestNG XML suite (make sure the path is correct)
-//            testng.setTestSuites(Collections.singletonList("../FSDP_T06_GRP1/test/test/testng.xml"));
-//
-//            // Run the tests
-//            testng.run();
-//
-//            // Retrieve the test results
-//            List<TestCaseResult> results = TestResultListener.getTestCaseResults();
-//
-//            // Return the test results in the response
-//            return ResponseEntity.ok(results);
-//        } catch (Exception e) {
-//            // Return an error response if something goes wrong
-//            return ResponseEntity.status(500).body(null);
-//        }
-//    }
-//    // Trigger TestNG programmatically
-//    private List<TestCaseResult> runTestNg() {
-//        List<TestCaseResult> testResults = new ArrayList<>();
-//
-//        try {
-//            // Create a TestNG instance
-//            TestNG testng = new TestNG();
-//
-//            // Add the test cases from `loginTestCases` list
-//            for (LoginTestCase loginRequest : loginTestCases) {
-//                TestCaseResult result = Login.runLogin1(loginRequest.getUserName(), loginRequest.getPassWord(), loginRequest.getBrowser());
-//                testResults.add(result); // Collect the test result
-//            }
-//
-//            // Run the tests
-//            testng.run();
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-//
-//        return testResults;
-//    }
-//
-//
-//    // Method to retrieve test cases for TestNG (used in your TestNG DataProvider)
-//    public static List<LoginTestCase> getLoginTestCases() {
-//        return loginTestCases;
-//    }
-//    private void resetTestState() {
-//        // Clear the test results and any stored data
-//        TestResultListener.clearResults(); // Assuming you have a method in TestResultListener to clear results
-//        LoginTest.setGroupedTestCases(new HashMap<>()); // Reset the grouped test cases
-//        testResults.clear(); // Clear the test results list
-//    }
-}
+    @PostMapping("/testinglogin3")
+    public ResponseEntity<List<TestCaseResult>> testLogin3(@RequestBody List<LoginTestCase> loginRequests) {
+        try {
+            // Group test cases by browser
+            resetTestState();
+            Map<String, List<LoginTestCase>> groupedTestCases = loginRequests.stream()
+                    .collect(Collectors.groupingBy(LoginTestCase::getBrowser));
 
+            // Store the grouped test cases in a static variable for access by DataProvider
+            LoginTest.setGroupedTestCases(groupedTestCases);
+
+            // Create a TestNG instance
+            TestNG testng = new TestNG();
+
+            // Add the TestResultListener to the TestNG suite
+            TestResultListener resultListener = new TestResultListener();
+            testng.addListener((ITestListener) resultListener); // Register the listener
+
+            // Set the TestNG XML suite (make sure the path is correct)
+            testng.setTestSuites(Collections.singletonList("../FSDP_T06_GRP1/test/test/testng.xml"));
+
+            // Run the tests
+            testng.run();
+
+            // Retrieve the test results
+            List<TestCaseResult> results = TestResultListener.getTestCaseResults();
+
+            // Return the test results in the response
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            // Return an error response if something goes wrong
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+    // Trigger TestNG programmatically
+    private List<TestCaseResult> runTestNg() {
+        List<TestCaseResult> testResults = new ArrayList<>();
+
+        try {
+            // Create a TestNG instance
+            TestNG testng = new TestNG();
+
+            // Add the test cases from `loginTestCases` list
+            for (LoginTestCase loginRequest : loginTestCases) {
+                TestCaseResult result = Login.runLogin1(loginRequest.getUserName(), loginRequest.getPassWord(), loginRequest.getBrowser());
+                testResults.add(result); // Collect the test result
+            }
+
+            // Run the tests
+            testng.run();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return testResults;
+    }
+
+
+    // Method to retrieve test cases for TestNG (used in your TestNG DataProvider)
+    public static List<LoginTestCase> getLoginTestCases() {
+        return loginTestCases;
+    }
+    private void resetTestState() {
+        // Clear the test results and any stored data
+        TestResultListener.clearResults(); // Assuming you have a method in TestResultListener to clear results
+        LoginTest.setGroupedTestCases(new HashMap<>()); // Reset the grouped test cases
+        testResults.clear(); // Clear the test results list
+    }
+    @GetMapping("/run-suite")
+    public String runTestSuite() {
+        // Specify the path to your TestNG XML suite file
+        String testNgXmlPath = "../FSDP_T06_GRP1/test/test/testng.xml"; // Update this path
+
+        TestNG testNG = new TestNG();
+        testNG.setTestSuites(Collections.singletonList(testNgXmlPath));
+
+        // Run the TestNG suite
+        testNG.run();
+
+        return "Test suite execution started using TestNG XML suite file.";
+    }
+    @PostMapping("/run-test1")
+    public String runTest1(@RequestParam String browser) {
+        TestNG testng = new TestNG();
+        testng.setTestClasses(new Class[] { Testng.class });
+        testng.setGroups("test1"); // Run only the test1 group
+
+        System.setProperty("browser", browser); // Set browser parameter for TestNG
+        testng.run();
+        return "Test 1 completed";
+    }
+}

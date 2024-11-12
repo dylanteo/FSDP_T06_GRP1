@@ -25,7 +25,7 @@ public class OpenAccount {
     }
 
     public String runOpenNewAccount(String username, String password, String accountType, String accountNumber,String Browser) {
-        WebDriver driver = seleniumService.getDriver("chrome"); // Get the driver from SeleniumService
+        WebDriver driver = seleniumService.getDriver();
         seleniumService.setUp(Browser);
 
         String result;
