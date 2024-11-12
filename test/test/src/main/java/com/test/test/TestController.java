@@ -1,19 +1,12 @@
 package com.test.test;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-
-import java.math.BigDecimal;
-
-@Controller
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
-//@CrossOrigin(origins = "http://localhost:3001")
 public class TestController {
+
     @Autowired
     private SeleniumService seleniumService;
 
@@ -32,9 +25,15 @@ public class TestController {
         // Run the Selenium test with the provided username and password
         return seleniumService.runTest(username);
     }*/
+
     @GetMapping("/testinglogin")
-    public String test(){
-        return Login.runLogin("test", "test");
+    public String testLogin() {
+        return Login.runLogin("test", "test"); // Run the login test with specified credentials
+    }
+
+    @GetMapping("/testingForgotLoginInfo")
+    public String testForgotLoginInfo() {
+        return Login.runForgotLoginInfo(); // Run the "Forgot Login Info" test
     }
 
     @GetMapping("/react")
