@@ -1,26 +1,35 @@
 package com.test.test;
 
+
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.*;
+
+import org.openqa.selenium.WebDriver;
+
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxOptions;
 import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
+
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+
+
 import org.springframework.stereotype.Service;
-import org.testng.Assert;
 
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.time.Duration;
 
 @Service
 public class SeleniumService {
 
+
+
+    private WebDriver driver;
     private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
     private static ThreadLocal<WebDriver> driver = new ThreadLocal<>();
+
 
     public void setUp(String browser) {
         // Set up WebDriverManager to manage the browser drivers

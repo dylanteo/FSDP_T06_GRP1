@@ -1,19 +1,18 @@
 package com.test.test;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.testng.ITestListener;
 import org.testng.TestListenerAdapter;
 import org.testng.TestNG;
 
 
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
+
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
 //@CrossOrigin(origins = "http://localhost:3001")
@@ -22,6 +21,15 @@ public class TestController {
     private SeleniumService seleniumService;
     private static List<TestCaseResult> testResults = new ArrayList<>();
     private static List<LoginTestCase> loginTestCases = new ArrayList<>();
+
+    @Autowired
+    private Login login; // Inject Login service
+
+    @Autowired
+    private Register register; // Inject Register service
+
+    @Autowired
+    private OpenAccount openAccount;
 
     @GetMapping("/hello")
     public String hello() {
@@ -40,7 +48,20 @@ public class TestController {
     }*/
     @GetMapping("/testinglogin")
     public String test(){
+
         return Login.runLogin("test", "test","chrome");
+
+    }
+
+    @GetMapping("/signup")
+    public String signup(){
+        return register.runRegister("hi", "hi","hi","hi","hi","hi","hi","hi","hi","hi");
+    }
+
+    @GetMapping("/openaccount")
+    public String openaccount(){
+        return openAccount.runOpenNewAccount("test","test", "SAVINGS", "14343");
+
     }
 
     @GetMapping("/react")

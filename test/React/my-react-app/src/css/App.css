@@ -89,12 +89,20 @@ body {
   background-color: white;
 }
 
-.header {
+/* Main Buttons Section */
+.main-buttons {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
+  justify-content: center;
+  margin-bottom: 30px;
 }
 
+.main-buttons .btn {
+  font-size: 1.2em;
+  padding: 15px 30px;
+  margin: 0 15px;
+}
+
+/* Buttons */
 .btn {
   padding: 10px 20px;
   margin-left: 10px;
