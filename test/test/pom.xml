@@ -57,6 +57,7 @@
 		</dependency>
 
 		<dependency>
+
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter-api</artifactId>
 			<version>5.7.2</version>
@@ -71,6 +72,7 @@
 
 
 		<dependency>
+
 			<groupId>org.seleniumhq.selenium</groupId>
 			<artifactId>selenium-java</artifactId>
 			<version>4.19.1</version>
@@ -79,7 +81,9 @@
 
 
 
+
 </dependencies>
+
 	<build>
 		<plugins>
 			<plugin>

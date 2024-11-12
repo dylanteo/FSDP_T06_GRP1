@@ -1,8 +1,6 @@
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.testng.ITestListener;
 import org.testng.TestListenerAdapter;
@@ -10,14 +8,16 @@ import org.testng.TestNG;
 
 
 
+
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Controller
+
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
-//@CrossOrigin(origins = "http://localhost:3001")
 public class TestController {
+
     @Autowired
     private SeleniumService seleniumService;
     private static List<TestCaseResult> testResults = new ArrayList<>();
@@ -47,8 +47,15 @@ public class TestController {
         // Run the Selenium test with the provided username and password
         return seleniumService.runTest(username);
     }*/
-    @GetMapping("/testinglogin")
-    public String test(){
+
+
+
+    @GetMapping("/testingForgotLoginInfo")
+    public String testForgotLoginInfo() {
+        return Login.runForgotLoginInfo(); // Run the "Forgot Login Info" test
+
+      @GetMapping("/testinglogin")  
+  public String test(){
 
         return Login.runLogin("hi", "hi","chrome");
 
@@ -63,12 +70,16 @@ public class TestController {
     public String openaccount(){
         return openAccount.runOpenNewAccount("hi","hi", "SAVINGS", "15120","chrome");
 
+
     }
 
     @GetMapping("/react")
     public String sayHello() {
         return "Hello from Java backend!";
     }
+
+}
+
     @GetMapping("/managerLogin")
     public String managerLogin(){
         return admin.runBankManagerLogin("chrome");
@@ -178,3 +189,4 @@ public class TestController {
 //        testResults.clear(); // Clear the test results list
 //    }
 }
+
