@@ -1,21 +1,24 @@
 package com.test.test;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 
-import java.math.BigDecimal;
-
-@Controller
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
 //@CrossOrigin(origins = "http://localhost:3001")
 public class TestController {
     @Autowired
     private SeleniumService seleniumService;
+
+    @Autowired
+    private Login login; // Inject Login service
+
+    @Autowired
+    private Register register; // Inject Register service
+
+    @Autowired
+    private OpenAccount openAccount;
 
     @GetMapping("/hello")
     public String hello() {
@@ -34,7 +37,17 @@ public class TestController {
     }*/
     @GetMapping("/testinglogin")
     public String test(){
-        return Login.runLogin("test", "test");
+        return login.runLogin("test", "test");
+    }
+
+    @GetMapping("/signup")
+    public String signup(){
+        return register.runRegister("hi", "hi","hi","hi","hi","hi","hi","hi","hi","hi");
+    }
+
+    @GetMapping("/openaccount")
+    public String openaccount(){
+        return openAccount.runOpenNewAccount("test","test", "SAVINGS", "14343");
     }
 
     @GetMapping("/react")
