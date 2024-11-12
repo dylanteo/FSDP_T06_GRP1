@@ -1,6 +1,7 @@
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.testng.ITestListener;
 import org.testng.TestListenerAdapter;
@@ -11,9 +12,7 @@ import org.testng.TestNG;
 
 import java.util.*;
 import java.util.stream.Collectors;
-
 @Controller
-
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
 public class TestController {
@@ -52,13 +51,11 @@ public class TestController {
 
     @GetMapping("/testingForgotLoginInfo")
     public String testForgotLoginInfo() {
-        return Login.runForgotLoginInfo(); // Run the "Forgot Login Info" test
-
-      @GetMapping("/testinglogin")  
-  public String test(){
-
-        return Login.runLogin("hi", "hi","chrome");
-
+        return forgetLogin.runForgotLoginInfo("chrome"); // Run the "Forgot Login Info" test
+    }
+    @GetMapping("/testinglogin")
+    public String test(){
+        return Login.runLogin("hi", "hi","firefox");
     }
 
     @GetMapping("/signup")
@@ -77,8 +74,6 @@ public class TestController {
     public String sayHello() {
         return "Hello from Java backend!";
     }
-
-}
 
     @GetMapping("/managerLogin")
     public String managerLogin(){

@@ -55,11 +55,11 @@ public class SeleniumService {
             capabilities.setCapability(ChromeOptions.CAPABILITY, chromeOptions);
         } else if ("firefox".equalsIgnoreCase(browser)) {
             FirefoxOptions firefoxOptions = new FirefoxOptions();
-            firefoxOptions.addArguments("--headless"); // Run Firefox in headless mode
+//            firefoxOptions.addArguments("--headless"); // Run Firefox in headless mode
             capabilities.setCapability(FirefoxOptions.FIREFOX_OPTIONS, firefoxOptions);
         } else if ("edge".equalsIgnoreCase(browser)) {
             EdgeOptions edgeOptions = new EdgeOptions();
-            edgeOptions.addArguments("--headless"); // Run in headless mode
+//            edgeOptions.addArguments("--headless"); // Run in headless mode
             capabilities.setCapability(EdgeOptions.CAPABILITY, edgeOptions);
         }
 
