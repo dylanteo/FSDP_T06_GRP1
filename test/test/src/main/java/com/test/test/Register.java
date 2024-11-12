@@ -24,9 +24,9 @@ public class Register {
 
 
 
-    public String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
-        seleniumService.setUp();
-        driver = seleniumService.getDriver();
+    public String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password,String browser) {
+        seleniumService.setUp(browser);
+        driver = seleniumService.getDriver(browser);
         String result;
 
         try {

@@ -18,7 +18,7 @@ public class admin {
         WebDriver driver = driverThreadLocal.get();
         if (driver == null) {
             seleniumService.setUp(browser);  // Pass browser type to SeleniumService
-            driver = seleniumService.getDriver();
+            driver = seleniumService.getDriver(browser);
             driverThreadLocal.set(driver);
         }
         return driver;

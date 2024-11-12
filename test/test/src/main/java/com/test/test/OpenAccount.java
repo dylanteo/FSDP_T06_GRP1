@@ -24,9 +24,9 @@ public class OpenAccount {
         this.loginHelper = loginHelper;
     }
 
-    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber) {
-        WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
-        seleniumService.setUp();
+    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber,String Browser) {
+        WebDriver driver = seleniumService.getDriver("chrome"); // Get the driver from SeleniumService
+        seleniumService.setUp(Browser);
 
         String result;
 

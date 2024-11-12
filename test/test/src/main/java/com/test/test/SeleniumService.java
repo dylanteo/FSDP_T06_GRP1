@@ -17,9 +17,11 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 
 import org.springframework.stereotype.Service;
+import org.testng.Assert;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Duration;
 
 @Service
 public class SeleniumService {
@@ -28,7 +30,6 @@ public class SeleniumService {
 
     private WebDriver driver;
     private static final String GRID_URL = "http://localhost:4444/wd/hub"; // Update with your Grid hub URL
-    private static ThreadLocal<WebDriver> driver = new ThreadLocal<>();
 
 
     public void setUp(String browser) {
@@ -64,42 +65,43 @@ public class SeleniumService {
 
         try {
             // Connect to the Selenium Grid hub with RemoteWebDriver
-            driver.set(new RemoteWebDriver(new URL(GRID_URL), capabilities));
+            driver = (new RemoteWebDriver(new URL(GRID_URL), capabilities));
         } catch (MalformedURLException e) {
             throw new RuntimeException("Failed to connect to Selenium Grid at " + GRID_URL, e);
         }
     }
 
-    public WebDriver getDriver() {
-        if (driver.get() == null) {
-            throw new IllegalStateException("Driver is not initialized. Call setUp() first.");
+    public WebDriver getDriver(String browser) {
+        if (driver == null) {
+            System.out.println("Driver is null, calling setUp...");
+            setUp(browser); // Call setUp if driver is null
         }
-        return driver.get();
+        return driver;
     }
 
     public void tearDown() {
-        if (driver.get() != null) {
-            driver.get().quit();
-            driver.remove();
-        }
+        driver.quit();
+
     }
 
     // Handle browser alerts
     public void handleAlert() {
         try {
-            WebDriverWait wait = new WebDriverWait(getDriver(), Duration.ofSeconds(3));
+            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(3));
             wait.until(ExpectedConditions.alertIsPresent());
-            Alert alert = getDriver().switchTo().alert();
+            Alert alert = driver.switchTo().alert();
             alert.accept(); // Click "OK"
-        } catch (TimeoutException | NoAlertPresentException e) {
-            // Handle timeout or no alert
+        } catch (TimeoutException e) {
+            // Handle timeout
+        } catch (NoAlertPresentException e) {
+            // Handle no alert present
         }
     }
 
     // Check for error messages on the page
     public void checkForErrorMessage() {
         try {
-            WebElement errorMessage = getDriver().findElement(By.cssSelector(".error-message")); // Adjust the selector
+            WebElement errorMessage = getDriver("chrome").findElement(By.cssSelector(".error-message")); // Adjust the selector
             String errorText = errorMessage.getText();
             System.out.println("Error message: " + errorText); // Print error message for debugging
 
@@ -111,7 +113,7 @@ public class SeleniumService {
 
     // Wait for the page URL to match the expected one
     public void waitForPageUrl(String expectedUrl) {
-        WebDriverWait wait = new WebDriverWait(getDriver(), Duration.ofSeconds(10));
+        WebDriverWait wait = new WebDriverWait(getDriver("chrome"), Duration.ofSeconds(10));
         wait.until(ExpectedConditions.urlToBe(expectedUrl));
     }
 
