@@ -3,6 +3,7 @@ package com.test.test;
 import org.openqa.selenium.*;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
@@ -10,22 +11,24 @@ import java.time.Duration;
 
 @Service
 public class Login {
-    private static SeleniumService seleniumService;
-    private static WebDriver driver;
+    private static SeleniumService seleniumService = new SeleniumService();
 
-    public Login() {
-        this.seleniumService = new SeleniumService();
+    @Autowired
+    public Login(SeleniumService seleniumService) {
+        this.seleniumService = seleniumService;
     }
 
-    // Method to run the standard login test
-    public static String runLogin(String username, String password) {
-        seleniumService.setUp();
-        driver = seleniumService.getDriver();
+
+
+    public static String runLogin(String username, String password, String browser) {
+        WebDriver driver = seleniumService.getDriver("chrome"); // Get the driver from SeleniumService
+        seleniumService.setUp(browser);
         String result;
 
         try {
-            login(username, password); // Call the login method
-            result = "Login Test completed successfully."; // Indicate success
+            login(driver, username, password); // Call the testLogin method with only the username
+            result = "Test completed successfully."; // Indicate success
+
         } catch (AssertionError e) {
             result = "Login Test failed: " + e.getMessage(); // Capture assertion failures
         } catch (WebDriverException e) {
@@ -39,8 +42,9 @@ public class Login {
         return result; // Return the result after cleanup
     }
 
-    // Private method to perform the login steps
-    private static void login(String username, String password) {
+
+    public static void login(WebDriver driver, String username, String password) {
+
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
@@ -140,4 +144,6 @@ public class Login {
 
 
 
+
 }
+
