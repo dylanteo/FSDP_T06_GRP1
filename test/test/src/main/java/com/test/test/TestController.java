@@ -196,13 +196,32 @@ public class TestController {
         return "Test suite execution started using TestNG XML suite file.";
     }
     @PostMapping("/run-test1")
-    public String runTest1(@RequestParam String browser) {
-        TestNG testng = new TestNG();
-        testng.setTestClasses(new Class[] { Testng.class });
-        testng.setGroups("test1"); // Run only the test1 group
+    public String runTest1(@RequestBody Map<String, List<Map<String, String>>> requestData) {
+        List<Map<String, String>> testData = requestData.get("testData");
 
-        System.setProperty("browser", browser); // Set browser parameter for TestNG
-        testng.run();
+        // Iterate over each row of test data
+        for (Map<String, String> row : testData) {
+            String browser = row.get("browser");
+            String firstName = row.get("firstName");
+            String lastName = row.get("lastName");
+            String postCode = row.get("postCode");
+
+            // Run the TestNG test
+            TestNG testng = new TestNG();
+            testng.setTestClasses(new Class[] { Testng.class });
+            testng.setGroups("test1"); // Run only the test1 group
+
+            // Set browser parameter dynamically (can also handle other parameters)
+            System.setProperty("browser", browser);
+
+            // Optionally, set additional parameters for firstName, lastName, postCode as needed
+            System.setProperty("firstName", firstName);
+            System.setProperty("lastName", lastName);
+            System.setProperty("postCode", postCode);
+
+            testng.run();  // Run the TestNG test
+        }
+
         return "Test 1 completed";
     }
 }

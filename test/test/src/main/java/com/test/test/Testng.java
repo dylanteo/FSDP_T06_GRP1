@@ -11,11 +11,11 @@ public class Testng {
     OpenAccount oc = new OpenAccount(seleniumService, login);
 
     @Test(groups = "test1")
-    @Parameters("browser")
-    public void test1(String browser) {
+    @Parameters({"browser", "firstName", "lastName", "postCode"})
+    public void test1(String browser,String firstName, String lastName, String postCode) {
         // Initialize WebDriver first in SeleniumService
         //seleniumService.setUp(browser); // Set up the WebDriver based on the browser parameter
-        System.out.println(admin.runAddCustomer(browser, "1", "1", "1"));
+        System.out.println(admin.runAddCustomer(browser, firstName, lastName, postCode));
         //seleniumService.tearDown();
     }
 
