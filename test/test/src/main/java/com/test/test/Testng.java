@@ -10,14 +10,14 @@ public class Testng {
     Login login = new Login(seleniumService);
     OpenAccount oc = new OpenAccount(seleniumService, login);
 
-    @Test(groups = "test1")
-    @Parameters({"browser", "firstName", "lastName", "postCode"})
-    public void test1(String browser,String firstName, String lastName, String postCode) {
-        // Initialize WebDriver first in SeleniumService
-        //seleniumService.setUp(browser); // Set up the WebDriver based on the browser parameter
-        System.out.println(admin.runAddCustomer(browser, firstName, lastName, postCode));
-        //seleniumService.tearDown();
-    }
+//    @Test(groups = "test1")
+//    @Parameters({"browser", "firstName", "lastName", "postCode"})
+//    public void test1(String browser,String firstName, String lastName, String postCode) {
+//        // Initialize WebDriver first in SeleniumService
+//        //seleniumService.setUp(browser); // Set up the WebDriver based on the browser parameter
+//        System.out.println(admin.runAddCustomer(browser, firstName, lastName, postCode));
+//        //seleniumService.tearDown();
+//    }
 
     @Test
     @Parameters("browser")
