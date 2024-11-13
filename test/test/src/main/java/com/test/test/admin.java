@@ -219,7 +219,6 @@ public class admin {
             System.out.println("Failure: Account creation failed or unexpected message.");
             alert1.accept();
         }
-
         driver.quit();
     }
 }

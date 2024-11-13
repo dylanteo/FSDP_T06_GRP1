@@ -2,6 +2,7 @@ package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.testng.ITestListener;
@@ -22,6 +23,10 @@ public class TestController {
     private SeleniumService seleniumService;
     private static List<TestCaseResult> testResults = new ArrayList<>();
     private static List<LoginTestCase> loginTestCases = new ArrayList<>();
+    @Autowired
+    private TestCaseOutputRepository testCaseOutputRepository;
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
     private Login login; // Inject Login service
@@ -31,6 +36,13 @@ public class TestController {
 
     @Autowired
     private OpenAccount openAccount;
+    private void saveAndBroadcastResult(TestCaseOutput testCaseOutput) {
+        // Save the result to MongoDB
+        testCaseOutputRepository.save(testCaseOutput);
+
+        // Broadcast the result to WebSocket clients
+        messagingTemplate.convertAndSend("/topic/testResults", testCaseOutput);
+    }
 
     @GetMapping("/hello")
     public String hello() {
@@ -181,6 +193,11 @@ public class TestController {
         TestResultListener.clearResults(); // Assuming you have a method in TestResultListener to clear results
         LoginTest.setGroupedTestCases(new HashMap<>()); // Reset the grouped test cases
         testResults.clear(); // Clear the test results list
+    }
+    @GetMapping("/getTestResults")
+    public List<TestCaseOutput> getTestResults() {
+        // This will fetch all documents from the testCaseOutputs collection
+        return testCaseOutputRepository.findAll();
     }
     @GetMapping("/run-suite")
     public String runTestSuite() {

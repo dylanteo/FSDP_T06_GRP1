@@ -11,10 +11,6 @@ const TestResultsTable = ({ testResults }) => {
     );
   };
 
-  if (!testResults || !Array.isArray(testResults)) {
-    return <div>No test results available.</div>; // Handle no results case
-  }
-
   return (
     <div className="test-results">
       <h2>Test Results</h2>
@@ -24,6 +20,7 @@ const TestResultsTable = ({ testResults }) => {
             <th>ID</th>
             <th>Start Time</th>
             <th>End Time</th>
+            <th>Time Taken (ms)</th>
             <th>Status</th>
             <th>Error Message</th>
           </tr>
@@ -36,16 +33,17 @@ const TestResultsTable = ({ testResults }) => {
                 <td>{result.testCaseId}</td>
                 <td>{new Date(result.startTime).toLocaleString()}</td>
                 <td>{new Date(result.endTime).toLocaleString()}</td>
-                <td className={`status-${result.success ? 'passed' : 'failed'}`}>
-                  {result.success ? 'Passed' : 'Failed'}
+                <td>{result.timeTaken}</td>
+                <td className={`status-${result.status === 'Success' ? 'passed' : 'failed'}`}>
+                  {result.status}
                 </td>
                 <td>{!result.success && result.errorMessage ? 'View Error' : 'No Error'}</td>
               </tr>
 
-              {/* Expanded row (only shown when the test failed and error exists) */}
-              {expandedRows.includes(result.testCaseId) && !result.success && result.errorMessage && (
+              {/* Expanded row for detailed error information */}
+              {expandedRows.includes(result.testCaseId) && result.status === 'Failure' && result.errorMessage && (
                 <tr className="expanded-row">
-                  <td colSpan={5}>
+                  <td colSpan={6}>
                     <div className="test-details">
                       <strong>Error Message:</strong>
                       <p>{result.errorMessage}</p>
