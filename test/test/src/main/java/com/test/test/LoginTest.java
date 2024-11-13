@@ -17,30 +17,6 @@ public class LoginTest {
         return groupedTestCases;
     }
 
-    // Define a DataProvider that supplies test data
-    @DataProvider(name = "loginDataProvider")
-    public static Object[][] loginDataProvider() {
-        // Retrieve the grouped test cases from the static method
-        Map<String, List<LoginTestCase>> groupedTestCases = LoginTest.getGroupedTestCases();
-        System.out.println("Grouped Test Cases Size: " + groupedTestCases.size());
-        groupedTestCases.forEach((browser, testCases) ->
-                System.out.println("Browser: " + browser + ", Test Cases Count: " + testCases.size())
-        );
-        // Create a 2D array to pass to the DataProvider
-        List<Object[]> data = new ArrayList<>();
-
-        // Populate the data array with test cases for each browser
-        for (Map.Entry<String, List<LoginTestCase>> entry : groupedTestCases.entrySet()) {
-            String browser = entry.getKey();
-            for (LoginTestCase testCase : entry.getValue()) {
-                data.add(new Object[]{testCase.getUserName(), testCase.getPassWord(), browser});
-            }
-        }
-
-        // Convert to 2D array (required by TestNG DataProvider)
-        return data.toArray(new Object[0][0]);
-    }
-
     // The test method
     @Test(dataProvider = "loginDataProvider")
     public void testLogin(String username, String password, String browser) {
@@ -53,8 +29,11 @@ public class LoginTest {
         boolean success = false;
         String errorMessage = null;
 
+        // Create an instance of Login to call the runLogin method
+        Login loginInstance = new Login(new SeleniumService()); // Pass SeleniumService if needed in the constructor
+
         try {
-            String result = Login.runLogin(username, password, browser);
+            String result = loginInstance.runLogin(username, password, browser);
             System.out.println("Test Result: " + result);
 
             // Check the result to set success based on actual outcome
