@@ -15,8 +15,8 @@ import java.time.Duration;
 
 @Service
 public class OpenAccount {
-    private final SeleniumService seleniumService;
-    private final Login loginHelper; // Inject Login helper to handle login
+    private static SeleniumService seleniumService = new SeleniumService();
+    private static Login loginHelper = new Login(seleniumService); // Inject Login helper to handle login
 
     @Autowired
     public OpenAccount(SeleniumService seleniumService, Login loginHelper) {
@@ -24,9 +24,9 @@ public class OpenAccount {
         this.loginHelper = loginHelper;
     }
 
-    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber) {
+    public static String runOpenNewAccount(String username, String password, String accountType, String accountNumber, String browser) {
+        seleniumService.setUp(browser);
         WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
-        seleniumService.setUp();
 
         String result;
 
@@ -46,7 +46,7 @@ public class OpenAccount {
         return result; // Return the result after cleanup
     }
 
-    private void openNewAccount(WebDriver driver, String username, String password, String accountType, String accountNumber) {
+    private static void openNewAccount(WebDriver driver, String username, String password, String accountType, String accountNumber) {
         System.out.println("Logging in...");
         loginHelper.login(driver, username, password); // Use injected loginHelper to log in
 

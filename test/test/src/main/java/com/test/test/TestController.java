@@ -8,17 +8,8 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api") // Set a base URL path for all endpoints
 //@CrossOrigin(origins = "http://localhost:3001")
 public class TestController {
-    @Autowired
-    private SeleniumService seleniumService;
 
-    @Autowired
-    private Login login; // Inject Login service
 
-    @Autowired
-    private Register register; // Inject Register service
-
-    @Autowired
-    private OpenAccount openAccount;
 
     @GetMapping("/hello")
     public String hello() {
@@ -37,17 +28,17 @@ public class TestController {
     }*/
     @GetMapping("/testinglogin")
     public String test(){
-        return login.runLogin("test", "test");
+        return Login.runLogin("test", "test", "chrome");
     }
 
     @GetMapping("/signup")
     public String signup(){
-        return register.runRegister("hi", "hi","hi","hi","hi","hi","hi","hi","hi","hi");
+        return Register.runRegister("hi", "hi","hi","hi","hi","hi","hi","hi","h","hi", "chrome");
     }
 
     @GetMapping("/openaccount")
     public String openaccount(){
-        return openAccount.runOpenNewAccount("test","test", "SAVINGS", "14343");
+        return OpenAccount.runOpenNewAccount("test","test", "SAVINGS", "14343", "chrome");
     }
 
     @GetMapping("/react")

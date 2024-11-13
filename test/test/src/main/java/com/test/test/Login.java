@@ -13,7 +13,7 @@ import java.time.Duration;
 
 @Service
 public class Login {
-    private final SeleniumService seleniumService;
+    private static SeleniumService seleniumService = new SeleniumService();
 
     @Autowired
     public Login(SeleniumService seleniumService) {
@@ -21,9 +21,10 @@ public class Login {
     }
 
 
-    public String runLogin(String username, String password) {
+    public static String runLogin(String username, String password, String browser) {
+        seleniumService.setUp(browser);
         WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
-        seleniumService.setUp();
+
         String result;
 
         try {
@@ -42,7 +43,7 @@ public class Login {
         return result; // Return the result after cleanup
     }
 
-    public void login(WebDriver driver, String username, String password) {
+    public static void login(WebDriver driver, String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 

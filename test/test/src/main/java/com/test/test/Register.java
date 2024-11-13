@@ -14,23 +14,23 @@ import java.time.Duration;
 
 @Service
 public class Register {
-    private SeleniumService seleniumService;
-    private WebDriver driver;
+    private static SeleniumService seleniumService = new SeleniumService();
+
 
     @Autowired
-    public Register() {
-        this.seleniumService = new SeleniumService();
+    public Register(SeleniumService seleniumService) {
+        this.seleniumService = seleniumService;
     }
 
 
 
-    public String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
-        seleniumService.setUp();
-        driver = seleniumService.getDriver();
+    public static String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password, String browser) {
+        seleniumService.setUp(browser);
+        WebDriver driver = seleniumService.getDriver();
         String result;
 
         try {
-            register(firstName, lastName, address, city, state, zipCode, phone, ssn, username, password); // Call the testLogin method with only the username
+            register(driver, firstName, lastName, address, city, state, zipCode, phone, ssn, username, password); // Call the testLogin method with only the username
             result = "Test completed successfully."; // Indicate success
         } catch (AssertionError e) {
             result = "Test failed: " + e.getMessage(); // Capture assertion failures
@@ -45,7 +45,7 @@ public class Register {
         return result; // Return the result after cleanup
     }
 
-    public void register(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
+    public static void register(WebDriver driver, String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 

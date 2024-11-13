@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: selenium-node-edge
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: selenium-node-edge
+  template:
+    metadata:
+      labels:
+        app: selenium-node-edge
+    spec:
+      containers:
+        - name: selenium-node-edge
+          image: selenium/node-edge:4.26.0  # Ensure this matches the version of your Selenium Hub
+          ports:
+            - containerPort: 5555  # The default port for Selenium Node
+          env:
+            - name: SE_EVENT_BUS_HOST
+              value: "selenium-hub"  # Must match the name of your Selenium Hub service
+            - name: SE_EVENT_BUS_PUBLISH_PORT
+              value: "4442"  # Must match the Event Bus publish port of your Selenium Hub
+            - name: SE_EVENT_BUS_SUBSCRIBE_PORT
+              value: "4443"  # Must match the Event Bus subscribe port of your Selenium Hub
+            - name: SE_NODE_MAX_SESSIONS
+              value: "2"  # Allow this node to handle 2 sessions concurrently
+            - name: SE_NODE_SESSION_TIMEOUT
+              value: "300"  # Optional: Set session timeout in seconds
+            - name: SE_NODE_OVERRIDE_MAX_SESSIONS
+              value: "true"  # Optional: Override session limits if necessary
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          volumeMounts:
+            - mountPath: /dev/shm
+              name: dshm
+      volumes:
+        - name: dshm
+          emptyDir:
+            medium: Memory
+
+
