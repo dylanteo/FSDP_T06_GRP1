@@ -1,205 +1,72 @@
+/* Base App styling */
 .App {
-  text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-body {
-  font-family: 'Arial', sans-serif;
+  font-family: Arial, sans-serif;
   background-color: #f4f5f7;
-  margin: 0;
-  padding: 0;
-}
-
-.App {
-  display: flex;
-  height: 100vh;
-}
-
-/* Sidebar */
-.sidebar {
-  width: 250px;
-  background-color: #272b30;
-  color: white;
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
 }
 
-.sidebar h2 {
+.app-header h1 {
+  text-align: center;
+  color: #333;
   margin-bottom: 20px;
 }
 
-.sidebar ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-.sidebar ul li {
-  padding: 10px;
-  background-color: #343a40;
-  margin-bottom: 10px;
-  cursor: pointer;
-  width: 100%;
-  text-align: left;
-  border-radius: 5px;
-}
-
-.sidebar ul li:hover {
-  background-color: #495057;
-}
-
-/* Content Area */
-.content {
-  flex-grow: 1;
-  padding: 20px;
-  background-color: white;
-}
-
-/* Main Buttons Section */
-.main-buttons {
+/* Button styling */
+.controls {
   display: flex;
   justify-content: center;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
-.main-buttons .btn {
-  font-size: 1.2em;
-  padding: 15px 30px;
-  margin: 0 15px;
-}
-
-/* Buttons */
 .btn {
   padding: 10px 20px;
-  margin-left: 10px;
+  margin: 0 10px;
   border: none;
+  color: white;
   border-radius: 5px;
   cursor: pointer;
+  transition: background-color 0.3s;
 }
 
-.btn.import {
+.upload-btn {
   background-color: #17a2b8;
-  color: white;
 }
 
-.btn.create {
+.create-btn {
   background-color: #007bff;
-  color: white;
 }
 
-.btn.run-tests {
+.run-tests-btn {
   background-color: #28a745;
-  color: white;
   margin-top: 20px;
 }
 
+/* Hover effect for buttons */
 .btn:hover {
   opacity: 0.9;
 }
 
-/* CSV Uploader */
-.csv-uploader {
-  margin-bottom: 20px;
-}
-
-/* Filters */
+/* Filters section */
 .filters {
   display: flex;
-  justify-content: flex-start;
+  justify-content: center;
+  gap: 15px;
   margin-bottom: 20px;
 }
 
 .filters label {
-  margin-right: 20px;
-}
-
-.filters select {
-  padding: 5px;
   font-size: 14px;
 }
 
-/* Test Case Table */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 20px;
-}
-
-table th,
-table td {
-  padding: 15px;
-  border: 1px solid #dee2e6;
-  text-align: left;
-}
-
-table th {
-  background-color: #007bff;
-  color: white;
-}
-
-table td.priority-high {
-  color: red;
-}
-
-table td.priority-medium {
-  color: orange;
-}
-
-table td.priority-low {
-  color: green;
-}
-
-/* Browser Selector */
-.browser-selector {
-  margin-bottom: 20px;
-}
-
-.browser-selector label {
-  margin-right: 10px;
-}
-
-/* Test Results Table */
+/* Test results table styling */
 .test-results {
-  margin-top: 40px;
+  margin-top: 20px;
 }
 
 .test-results table {
   width: 100%;
   border-collapse: collapse;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
 }
 
 .test-results th,
@@ -212,8 +79,48 @@ table td.priority-low {
 .test-results th {
   background-color: #6c757d;
   color: white;
+  font-weight: bold;
 }
 
+/* Status colors */
+.status-success {
+  color: #28a745;
+}
+
+.status-failure {
+  color: #dc3545;
+}
+
+/* Expanded row styling for error details */
+.expanded-row {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.test-details {
+  padding: 10px;
+  font-size: 0.9em;
+  border-left: 4px solid #dc3545;
+  margin-top: -1px;
+}
+
+/* Bullet points in test details */
+.test-details ul {
+  margin: 0;
+  padding-left: 1.2em;
+  list-style-type: disc;
+}
+
+/* Row hover effect and cursor pointer for clickable rows */
+.test-row {
+  cursor: pointer;
+}
+
+.test-row:hover {
+  background-color: #f1f1f1;
+}
+
+/* Status indicators */
 .status-passed {
   color: #28a745;
 }
@@ -226,6 +133,7 @@ table td.priority-low {
   color: #ffc107;
 }
 
+/* Status icons */
 .status-passed::before {
   content: '✔️ ';
 }
@@ -236,4 +144,73 @@ table td.priority-low {
 
 .status-running::before {
   content: '⏳ ';
+}
+
+/* Hover styles for buttons */
+.upload-btn:hover {
+  background-color: #138496;
+}
+
+.create-btn:hover {
+  background-color: #0056b3;
+}
+
+.run-tests-btn:hover {
+  background-color: #218838;
+}
+
+/* Browser selector styling */
+.browser-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.browser-selector label {
+  margin: 0 10px;
+  font-size: 16px;
+  color: #333;
+}
+.test-analytics {
+  text-align: center;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.test-analytics h2 {
+  font-size: 1.5em;
+  color: #333;
+  margin-bottom: 15px;
+}
+
+.analytics-metrics {
+  display: flex;
+  justify-content: space-around;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.metric h3 {
+  font-size: 1.4em;
+  color: #007bff;
+}
+
+.metric p {
+  color: #555;
+  font-size: 0.9em;
+}
+
+.pass-percentage h3 {
+  color: #28a745;
+}
+
+.fail-percentage h3 {
+  color: #dc3545;
 }

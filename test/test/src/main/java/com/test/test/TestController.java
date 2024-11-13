@@ -6,12 +6,15 @@ import org.springframework.web.bind.annotation.*;
 import org.testng.ITestListener;
 import org.testng.TestListenerAdapter;
 import org.testng.TestNG;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
-
-
-
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
+
 @Controller
 @RestController // Use @RestController to directly return JSON responses
 @RequestMapping("/api") // Set a base URL path for all endpoints
@@ -31,6 +34,17 @@ public class TestController {
     @Autowired
     private OpenAccount openAccount;
 
+    // Inject the TestCaseOutputRepository to save results to MongoDB
+    @Autowired
+    private TestCaseOutputRepository testCaseOutputRepository;
+
+    // New endpoint to retrieve all test results from MongoDB
+    @GetMapping("/getTestResults")
+    public List<TestCaseOutput> getTestResults() {
+        // This will fetch all documents from the testCaseOutputs collection
+        return testCaseOutputRepository.findAll();
+    }
+
     @GetMapping("/hello")
     public String hello() {
         return "hello"; // This will look for hello.html in src/main/resources/templates
@@ -47,12 +61,75 @@ public class TestController {
         return seleniumService.runTest(username);
     }*/
 
-
-
     @GetMapping("/testingForgotLoginInfo")
     public String testForgotLoginInfo() {
-        return forgetLogin.runForgotLoginInfo("chrome"); // Run the "Forgot Login Info" test
+        String result;
+        String consoleOutput = "";
+
+        // Capture terminal output
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        PrintStream ps = new PrintStream(baos);
+        PrintStream originalOut = System.out; // Save the original output stream
+
+        // Format for timestamps
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+        try {
+            // Set start time
+            String startTime = LocalDateTime.now().format(formatter);
+
+            // Redirect System.out to capture output
+            System.setOut(ps);
+
+            // Run the test (example call to the test function)
+            result = forgetLogin.runForgotLoginInfo("chrome");
+
+            // Capture console output from the test execution
+            consoleOutput = baos.toString();
+
+            // Determine success or failure based on output or result
+            boolean success = result.contains("successfully"); // Or any success indicator
+
+            // Set end time
+            String endTime = LocalDateTime.now().format(formatter);
+
+            // Create a TestCaseOutput object to store in MongoDB
+            TestCaseOutput testCaseOutput = new TestCaseOutput();
+            testCaseOutput.setTestCaseId("ForgotLoginInfoTest");
+            testCaseOutput.setStartTime(startTime);
+            testCaseOutput.setEndTime(endTime);
+            testCaseOutput.setStatus(success ? "Success" : "Failure");
+            testCaseOutput.setTimeTaken(5000); // Replace with actual time calculation
+            testCaseOutput.setErrorMessage(success ? "No Error" : consoleOutput); // Save the console output as error message if failed
+
+            // Save to MongoDB
+            testCaseOutputRepository.save(testCaseOutput);
+
+            return result;
+        } catch (Exception e) {
+            consoleOutput = baos.toString();
+            result = "Error running Forgot Login Info test: " + e.getMessage();
+
+            // Set end time
+            String endTime = LocalDateTime.now().format(formatter);
+
+            // In case of exception, save with failure status
+            TestCaseOutput testCaseOutput = new TestCaseOutput();
+            testCaseOutput.setTestCaseId("ForgotLoginInfoTest");
+            testCaseOutput.setStartTime(LocalDateTime.now().format(formatter));
+            testCaseOutput.setEndTime(endTime);
+            testCaseOutput.setStatus("Failure");
+            testCaseOutput.setTimeTaken(5000); // Replace with actual time calculation
+            testCaseOutput.setErrorMessage("Exception: " + e.getMessage() + "\nConsole Output:\n" + consoleOutput);
+
+            testCaseOutputRepository.save(testCaseOutput);
+
+            return result;
+        } finally {
+            System.setOut(originalOut); // Reset System.out to original
+        }
     }
+
     @GetMapping("/testinglogin")
     public String test(){
         return Login.runLogin("hi", "hi","firefox");
@@ -66,8 +143,6 @@ public class TestController {
     @GetMapping("/openaccount")
     public String openaccount(){
         return openAccount.runOpenNewAccount("hi","hi", "SAVINGS", "15120","chrome");
-
-
     }
 
     @GetMapping("/react")
@@ -79,10 +154,12 @@ public class TestController {
     public String managerLogin(){
         return admin.runBankManagerLogin("chrome");
     }
+
     @GetMapping("/addcustomer")
     public String addCustomer(){
         return admin.runAddCustomer("chrome","yes","yes","yes");
     }
+
     @GetMapping("/addcustomer1")
     public String addCustomer1(){
         // Run the test twice
@@ -92,6 +169,18 @@ public class TestController {
         // Combine the results into a single string
         return "First run result: " + result1 + "<br>" + "Second run result: " + result2;
     }
+
+    // Additional methods and endpoints that you may need
+
+    // Updated calculateTimeDifference to return long
+    private long calculateTimeDifference(String startTime, String endTime) {
+        Instant start = Instant.parse(startTime);
+        Instant end = Instant.parse(endTime);
+        return java.time.Duration.between(start, end).toMillis(); // Return duration in milliseconds as a long
+    }
+
+
+    // Commented out code and other endpoints
 
 //    @PostMapping("/testinglogin1")
 //    public ResponseEntity<List<TestCaseResult>> testLogin(@RequestBody List<LoginTestCase> loginRequests) {
@@ -177,11 +266,11 @@ public class TestController {
 //    public static List<LoginTestCase> getLoginTestCases() {
 //        return loginTestCases;
 //    }
-//    private void resetTestState() {
-//        // Clear the test results and any stored data
-//        TestResultListener.clearResults(); // Assuming you have a method in TestResultListener to clear results
-//        LoginTest.setGroupedTestCases(new HashMap<>()); // Reset the grouped test cases
-//        testResults.clear(); // Clear the test results list
-//    }
-}
 
+    private void resetTestState() {
+        // Clear the test results and any stored data
+        TestResultListener.clearResults(); // Assuming you have a method in TestResultListener to clear results
+        LoginTest.setGroupedTestCases(new HashMap<>()); // Reset the grouped test cases
+        testResults.clear(); // Clear the test results list
+    }
+}

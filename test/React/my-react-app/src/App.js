@@ -1,157 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import TestResultsTable from './components/TestResultsTable';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
-import TestCaseTable from './components/TestCaseTable';
-import TestResultsTable from './components/TestResultsTable'; // New Test Results Table
+import TestAnalytics from './components/TestAnalytics'; // Import the new TestAnalytics component
 import './css/App.css';
 
 function App() {
-  const [testCases, setTestCases] = useState([]);
-  const [selectedBrowsers, setSelectedBrowsers] = useState([]);
-  const [testResults, setTestResults] = useState([]); // Initialize empty state for test results
-  const [loading, setLoading] = useState(false); // New loading state
+  const [testResults, setTestResults] = useState([]);
+  const [loading, setLoading] = useState(true); // Loading state for data fetching
+  const [isCsvUploaderVisible, setIsCsvUploaderVisible] = useState(false);
+  const [selectedBrowsers, setSelectedBrowsers] = useState([]); // For browser selection
 
-  const [filters, setFilters] = useState({
-    priority: 'All',
-    feature: 'All',
-  });
-
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [name]: value,
-    }));
-  };
-
-  const filterTestCases = (testCase) => {
-    if (filters.priority !== 'All' && testCase.priority !== filters.priority) {
-      return false;
-    }
-    if (filters.feature !== 'All' && testCase.feature !== filters.feature) {
-      return false;
-    }
-    return true;
-  };
-
-  const runTests = async () => {
-    console.log('Running tests...');
-    console.log('Test Cases:', testCases);
-    console.log('Browsers:', selectedBrowsers);
-
-    // Set loading to true to disable the button
-    setLoading(true);
-
-    // Convert test cases to JSON format if the server expects JSON
-    const testCasesData = testCases.map(tc => ({
-      username: tc.username,
-      password: tc.password,
-      browser: tc.browser
-    }));
-    console.log("testcasedata", testCasesData);
-
-    try {
-      const response = await fetch('http://localhost:8080/api/testinglogin3', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // Set content type to JSON
-        },
-        body: JSON.stringify(testCasesData), // Send the JSON data
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+  // Fetch test results from MongoDB when the component loads
+  useEffect(() => {
+    const fetchTestResults = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/getTestResults');
+        if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
+        const data = await response.json();
+        setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 }))); // Set ID starting from 1
+      } catch (error) {
+        console.error('Error fetching test results:', error);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      const data = await response.text();
-      console.log('Response:', data);
+    fetchTestResults();
+  }, []);
 
-      const resultsArray = JSON.parse(data);
-      const parsedResults = resultsArray.map((result, index) => {
-        const { testCaseId, startTime, endTime, success, errorMessage } = result;
-        return {
-          testCaseId: testCaseId || `TestCase ${index + 1}`,
-          startTime: startTime || 'N/A',
-          endTime: endTime || 'N/A',
-          success: success || false,
-          errorMessage: errorMessage || 'No errors',
-        };
-      });
+  // Toggle CSV uploader visibility
+  const toggleCsvUploader = () => {
+    setIsCsvUploaderVisible(!isCsvUploaderVisible);
+  };
 
-      await fetch('http://localhost:5000/api/test-results', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(parsedResults),
-      });
-
-      setTestResults(parsedResults);
-    } catch (error) {
-      console.error('Error running tests:', error);
-    } finally {
-      // Set loading to false to re-enable the button
-      setLoading(false);
-    }
+  // Placeholder function for starting tests
+  const startTests = () => {
+    console.log("Starting tests with browsers:", selectedBrowsers);
+    // Logic to run tests can be added here
   };
 
   return (
     <div className="App">
-      <div className="sidebar">
-        <h2>Test Case Manager</h2>
-        <ul>
-          <li>Create Test Case</li>
-          <li>Move Folder</li>
-          <li>Edit Folder</li>
-          <li>Delete</li>
-        </ul>
+      <header className="app-header">
+        <h1>Test Results Dashboard</h1>
+      </header>
+
+      <div className="controls">
+        <button className="btn upload-btn" onClick={toggleCsvUploader}>
+          {isCsvUploaderVisible ? 'Hide CSV Uploader' : 'Upload CSV'}
+        </button>
+        <button className="btn create-btn" onClick={() => alert("Upload Java File - Coming Soon!")}>
+          Upload Java Test Case
+        </button>
+        <button className="btn run-tests-btn" onClick={startTests}>
+          Start Tests
+        </button>
       </div>
-      <div className="content">
-        <div className="header">
-          <button className="btn import">Import via CSV</button>
-          <button className="btn create">Create Test Case</button>
-        </div>
 
-        <CsvUploader setTestCases={setTestCases} />
+      {isCsvUploaderVisible && <CsvUploader setTestCases={setTestResults} />}
 
-        {/* Filtering Section */}
-        <div className="filters">
-          <label>
-            Priority:
-            <select name="priority" value={filters.priority} onChange={handleFilterChange}>
-              <option value="All">All</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </label>
-          <label>
-            Feature:
-            <select name="feature" value={filters.feature} onChange={handleFilterChange}>
-              <option value="All">All</option>
-              <option value="Authentication">Authentication</option>
-              <option value="Registration">Registration</option>
-              <option value="Search">Search</option>
-            </select>
-          </label>
-        </div>
+      <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
 
-        {testCases.length > 0 && (
-          <>
-            <TestCaseTable testCases={testCases.filter(filterTestCases)} />
-            <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
-            <button
-              className="btn run-tests"
-              onClick={runTests}
-              disabled={loading} // Disable the button if loading is true
-            >
-              {loading ? 'Running Tests...' : 'Run Tests'}
-            </button>
-          </>
-        )}
+      {/* Test Analytics Component to show test statistics */}
+      <TestAnalytics testResults={testResults} />
 
-        <TestResultsTable testResults={testResults} /> {/* Updated Test Results Table */}
-      </div>
+      {loading ? (
+        <p>Loading test results...</p>
+      ) : (
+        <TestResultsTable testResults={testResults} />
+      )}
     </div>
   );
 }
