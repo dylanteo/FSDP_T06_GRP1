@@ -1,0 +1,141 @@
+version: "3"
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - "16686:16686"
+      - "4317:4317"
+
+  # Chrome nodes (3 total)
+  chrome:
+    image: selenium/node-chrome:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  chrome-2:
+    image: selenium/node-chrome:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  chrome-3:
+    image: selenium/node-chrome:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  # Edge nodes (3 total)
+  edge:
+    image: selenium/node-edge:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  edge-2:
+    image: selenium/node-edge:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  edge-3:
+    image: selenium/node-edge:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  # Firefox nodes (3 total)
+  firefox:
+    image: selenium/node-firefox:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  firefox-2:
+    image: selenium/node-firefox:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  firefox-3:
+    image: selenium/node-firefox:4.26.0-20241101
+    shm_size: 2gb
+    depends_on:
+      - selenium-hub
+    environment:
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317
+
+  selenium-hub:
+    image: selenium/hub:4.26.0-20241101
+    container_name: selenium-hub
+    ports:
+      - "4442:4442"
+      - "4443:4443"
+      - "4444:4444"
+    depends_on:
+      - jaeger
+    environment:
+      - SE_ENABLE_TRACING=true
+      - SE_OTEL_TRACES_EXPORTER=otlp
+      - SE_OTEL_EXPORTER_ENDPOINT=http://jaeger:4317

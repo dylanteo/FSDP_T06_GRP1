@@ -13,7 +13,7 @@ app.use(cors({
 }));
 
 // Define the exact target directory using absolute path
-const uploadDir = 'C:\\Users\\lauyh\\IdeaProjects\\test\\FSDP_T06_GRP1\\test\\test\\src\\main\\java\\com\\test\\test';
+const uploadDir = path.join(__dirname, '..','..','..', 'test', 'src', 'main', 'java', 'com', 'test', 'test');
 
 console.log('Upload directory set to:', uploadDir);
 
