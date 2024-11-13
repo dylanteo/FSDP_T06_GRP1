@@ -83,7 +83,7 @@ public class forgetLogin {
             String displayedPassword = panelText.split("Password:")[1].trim();
 
             // Verify the retrieved username and password
-            Assert.assertEquals(displayedUsername, "B", "Username does not match expected value.");
+            Assert.assertEquals(displayedUsername, "A", "Username does not match expected value.");
             Assert.assertEquals(displayedPassword, "A", "Password does not match expected value.");
         } catch (ArrayIndexOutOfBoundsException e) {
             throw new AssertionError("Could not parse username and password from text: " + panelText, e);

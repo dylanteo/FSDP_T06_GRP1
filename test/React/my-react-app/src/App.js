@@ -2,42 +2,54 @@ import React, { useState, useEffect } from 'react';
 import TestResultsTable from './components/TestResultsTable';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
-import TestAnalytics from './components/TestAnalytics'; // Import the new TestAnalytics component
+import TestAnalytics from './components/TestAnalytics';
+import { io } from 'socket.io-client'; // Import Socket.IO client
 import './css/App.css';
 
 function App() {
   const [testResults, setTestResults] = useState([]);
-  const [loading, setLoading] = useState(true); // Loading state for data fetching
+  const [loading, setLoading] = useState(true);
   const [isCsvUploaderVisible, setIsCsvUploaderVisible] = useState(false);
-  const [selectedBrowsers, setSelectedBrowsers] = useState([]); // For browser selection
+  const [selectedBrowsers, setSelectedBrowsers] = useState([]);
 
-  // Fetch test results from MongoDB when the component loads
+  // Fetch initial test results from MongoDB
+  const fetchTestResults = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/getTestResults');
+      if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
+      const data = await response.json();
+      setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+    } catch (error) {
+      console.error('Error fetching test results:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Set up WebSocket connection with Socket.IO
   useEffect(() => {
-    const fetchTestResults = async () => {
-      try {
-        const response = await fetch('http://localhost:8080/api/getTestResults');
-        if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
-        const data = await response.json();
-        setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 }))); // Set ID starting from 1
-      } catch (error) {
-        console.error('Error fetching test results:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    fetchTestResults(); // Fetch initial data
 
-    fetchTestResults();
+    // Connect to the WebSocket
+    const socket = io('http://localhost:8080/test-results-websocket');
+
+    // Listen for new test results from WebSocket
+    socket.on('testResults', (newTestResult) => {
+      setTestResults((prevResults) => [...prevResults, newTestResult]);
+    });
+
+    // Cleanup WebSocket connection on component unmount
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
-  // Toggle CSV uploader visibility
   const toggleCsvUploader = () => {
     setIsCsvUploaderVisible(!isCsvUploaderVisible);
   };
 
-  // Placeholder function for starting tests
   const startTests = () => {
     console.log("Starting tests with browsers:", selectedBrowsers);
-    // Logic to run tests can be added here
   };
 
   return (
@@ -62,7 +74,6 @@ function App() {
 
       <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
 
-      {/* Test Analytics Component to show test statistics */}
       <TestAnalytics testResults={testResults} />
 
       {loading ? (
