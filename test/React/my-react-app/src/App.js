@@ -3,7 +3,6 @@ import TestResultsTable from './components/TestResultsTable';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
 import TestAnalytics from './components/TestAnalytics';
-import { io } from 'socket.io-client'; // Import Socket.IO client
 import './css/App.css';
 
 function App() {
@@ -11,45 +10,87 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [isCsvUploaderVisible, setIsCsvUploaderVisible] = useState(false);
   const [selectedBrowsers, setSelectedBrowsers] = useState([]);
+  const [javaFile, setJavaFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
 
-  // Fetch initial test results from MongoDB
-  const fetchTestResults = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/getTestResults');
-      if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
-      const data = await response.json();
-      setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
-    } catch (error) {
-      console.error('Error fetching test results:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Set up WebSocket connection with Socket.IO
   useEffect(() => {
-    fetchTestResults(); // Fetch initial data
-
-    // Connect to the WebSocket
-    const socket = io('http://localhost:8080/test-results-websocket');
-
-    // Listen for new test results from WebSocket
-    socket.on('testResults', (newTestResult) => {
-      setTestResults((prevResults) => [...prevResults, newTestResult]);
-    });
-
-    // Cleanup WebSocket connection on component unmount
-    return () => {
-      socket.disconnect();
+    const fetchTestResults = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/getTestResults');
+        if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
+        const data = await response.json();
+        setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+      } catch (error) {
+        console.error('Error fetching test results:', error);
+      } finally {
+        setLoading(false);
+      }
     };
+
+    fetchTestResults();
   }, []);
+
+  // Use useEffect to handle file upload when javaFile state changes
+  useEffect(() => {
+    if (javaFile) {
+      uploadJavaFile();
+    }
+  }, [javaFile]);
 
   const toggleCsvUploader = () => {
     setIsCsvUploaderVisible(!isCsvUploaderVisible);
   };
 
+  const handleJavaFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.name.endsWith('.java')) {
+      setJavaFile(file);
+      setUploadStatus('Preparing upload...');
+    } else {
+      alert('Please upload a valid Java file (.java)');
+      setUploadStatus(null);
+    }
+  };
+
+  const uploadJavaFile = async () => {
+    const formData = new FormData();
+    formData.append('file', javaFile);
+
+    try {
+      setUploadStatus('Uploading...');
+
+      const response = await fetch('http://localhost:5000/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Upload response:', data);
+      setUploadStatus('Upload successful!');
+      alert('Java file uploaded successfully!');
+
+      // Clear the file input
+      const fileInput = document.getElementById('javaFileInput');
+      if (fileInput) fileInput.value = '';
+      setJavaFile(null);
+
+    } catch (error) {
+      console.error('Error uploading Java file:', error);
+      setUploadStatus(`Error uploading file: ${error.message}`);
+      alert(`Error uploading file: ${error.message}`);
+    }
+  };
+
+  const handleUploadButtonClick = () => {
+    document.getElementById('javaFileInput').click();
+  };
+
   const startTests = () => {
-    console.log("Starting tests with browsers:", selectedBrowsers);
+    console.log('Starting tests with browsers:', selectedBrowsers);
   };
 
   return (
@@ -62,7 +103,11 @@ function App() {
         <button className="btn upload-btn" onClick={toggleCsvUploader}>
           {isCsvUploaderVisible ? 'Hide CSV Uploader' : 'Upload CSV'}
         </button>
-        <button className="btn create-btn" onClick={() => alert("Upload Java File - Coming Soon!")}>
+        <button
+          className="btn create-btn"
+          onClick={handleUploadButtonClick}
+          disabled={uploadStatus === 'Uploading...'}
+        >
           Upload Java Test Case
         </button>
         <button className="btn run-tests-btn" onClick={startTests}>
@@ -80,6 +125,20 @@ function App() {
         <p>Loading test results...</p>
       ) : (
         <TestResultsTable testResults={testResults} />
+      )}
+
+      <input
+        id="javaFileInput"
+        type="file"
+        accept=".java"
+        style={{ display: 'none' }}
+        onChange={handleJavaFileChange}
+      />
+
+      {uploadStatus && (
+        <div className={`upload-status ${uploadStatus.includes('Error') ? 'error' : ''}`}>
+          {uploadStatus}
+        </div>
       )}
     </div>
   );

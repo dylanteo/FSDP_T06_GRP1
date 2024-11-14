@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suite name="Login Test Suite" parallel="tests" thread-count="9">
+    <test name="Chrome Tests">
+        <parameter name="browser" value="chrome"/>
+        <classes>
+            <class name="com.test.test.Testng"/>
+        </classes>
+    </test>
+    <test name="Firefox Tests">
+        <parameter name="browser" value="firefox"/>
+        <classes>
+            <class name="com.test.test.Testng"/>
+        </classes>
+    </test>
+    <test name="Edge Tests">
+        <parameter name="browser" value="edge"/>
+        <classes>
+            <class name="com.test.test.Testng"/>
+        </classes>
+    </test>
+</suite>
+<!--suppose to be Testng-->

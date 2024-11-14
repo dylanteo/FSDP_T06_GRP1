@@ -25,9 +25,9 @@ public class Login {
 
     public void login(WebDriver driver, String username, String password) {
         // Ensure driver is not null before starting
-        if (driver == null) {
-            throw new IllegalStateException("WebDriver instance is null. Make sure the WebDriver is properly initialized.");
-        }
+//        if (driver == null) {
+//            throw new IllegalStateException("WebDriver instance is null. Make sure the WebDriver is properly initialized.");
+//        }
 
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
@@ -45,42 +45,53 @@ public class Login {
         Assert.assertEquals(driver.getCurrentUrl(), "https://parabank.parasoft.com/parabank/overview.htm", "Login was not successful.");
     }
 
-    private void saveTestResult(String testCaseId, String startTime, String endTime, String result, boolean success) {
+    private void saveTestResult(String testCaseId, String startTime, String endTime, Long timeTaken, String result, boolean success) {
+        System.out.println("uploading file to database");
         TestCaseOutput output = new TestCaseOutput();
         output.setTestCaseId(testCaseId);
         output.setStartTime(startTime);
         output.setEndTime(endTime);
+        output.setTimeTaken(timeTaken);
         output.setStatus(success ? "Success" : "Failure");
         output.setErrorMessage(success ? "No Error" : result);
 
         testCaseOutputRepository.save(output);
     }
 
-    public String runLogin(String username, String password, String browser) {
-        WebDriver driver = seleniumService.getDriver(browser);
-        if (driver == null) {
-            throw new IllegalStateException("Failed to initialize WebDriver. Check SeleniumService configuration.");
-        }
 
+
+    public String runLogin(String username, String password, String browser) {
         seleniumService.setUp(browser);
+        WebDriver driver = seleniumService.getDriver();
         String result;
         String startTime = LocalDateTime.now().toString();
         boolean success = false;
+        long timeTaken = 0;
 
         try {
+            // Record start time
+            long start = System.nanoTime();
+
             login(driver, username, password);
+
+            // Record end time
+            long end = System.nanoTime();
+
+            // Calculate time taken in milliseconds
+            timeTaken = (end - start) / 1_000_000;
+
             result = "Login Test completed successfully.";
             success = true;
         } catch (Exception e) {
             result = "Login Test encountered an error: " + e.getMessage();
         } finally {
-            // Only tear down if the driver is not null to prevent session ID errors
             if (driver != null) {
                 seleniumService.tearDown();
             }
         }
 
-        saveTestResult("LoginTest", startTime, LocalDateTime.now().toString(), result, success);
+        saveTestResult("LoginTest", startTime, LocalDateTime.now().toString(), timeTaken, result, success);
         return result;
     }
+
 }

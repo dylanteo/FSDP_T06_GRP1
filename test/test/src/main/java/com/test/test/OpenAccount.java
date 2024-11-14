@@ -2,6 +2,7 @@ package com.test.test;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
@@ -11,71 +12,74 @@ import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 
 @Service
 public class OpenAccount {
     private final SeleniumService seleniumService;
-    private final TestCaseOutputRepository testCaseOutputRepository;
-    private final Login loginHelper;
+    private final Login loginHelper; // Inject Login helper to handle login
 
     @Autowired
-    public OpenAccount(SeleniumService seleniumService, TestCaseOutputRepository testCaseOutputRepository, Login loginHelper) {
+    public OpenAccount(SeleniumService seleniumService, Login loginHelper) {
         this.seleniumService = seleniumService;
-        this.testCaseOutputRepository = testCaseOutputRepository;
         this.loginHelper = loginHelper;
     }
 
+    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber,String Browser) {
+
+        seleniumService.setUp(Browser);
+        WebDriver driver = seleniumService.getDriver();
 
 
-    private void openNewAccount(WebDriver driver, String username, String password, String accountType, String accountNumber) {
-        // Log in using loginHelper
-        loginHelper.runLogin(username, password, "chrome");
-
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
-        driver.findElement(By.linkText("Open New Account")).click();
-
-        WebElement accountTypeDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("type")));
-        new Select(accountTypeDropdown).selectByVisibleText(accountType);
-
-        WebElement fromAccountDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("fromAccountId")));
-        new Select(fromAccountDropdown).selectByVisibleText(accountNumber);
-
-        driver.findElement(By.xpath("//input[@value='Open New Account']")).click();
-
-        WebElement successMessage = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("openAccountResult")));
-        Assert.assertTrue(successMessage.getText().contains("Congratulations"));
-    }
-
-    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber, String browser) {
-        WebDriver driver = seleniumService.getDriver(browser);
-        seleniumService.setUp(browser);
-        String startTime = LocalDateTime.now().toString();
         String result;
-        boolean success = false;
 
         try {
             openNewAccount(driver, username, password, accountType, accountNumber);
-            result = "Open Account Test completed successfully.";
-            success = true;
+            result = "Test completed successfully."; // Indicate success
+        } catch (AssertionError e) {
+            result = "Test failed: " + e.getMessage(); // Capture assertion failures
+        } catch (WebDriverException e) {
+            result = "WebDriver error: " + e.getMessage(); // Capture WebDriver-specific errors
         } catch (Exception e) {
-            result = "Open Account Test encountered an error: " + e.getMessage();
+            result = "Test encountered an error: " + e.getMessage(); // Capture other exceptions
         } finally {
-            seleniumService.tearDown();
+            seleniumService.tearDown(); // Ensure the teardown happens regardless of test success
         }
 
-        saveTestResult("OpenAccountTest", startTime, LocalDateTime.now().toString(), result, success);
-        return result;
+        return result; // Return the result after cleanup
     }
 
-    private void saveTestResult(String testCaseId, String startTime, String endTime, String result, boolean success) {
-        TestCaseOutput output = new TestCaseOutput();
-        output.setTestCaseId(testCaseId);
-        output.setStartTime(startTime);
-        output.setEndTime(endTime);
-        output.setStatus(success ? "Success" : "Failure");
-        output.setErrorMessage(success ? "No Error" : result);
+    private void openNewAccount(WebDriver driver, String username, String password, String accountType, String accountNumber) {
+        System.out.println("Logging in...");
+        loginHelper.login(driver, username, password); // Use injected loginHelper to log in
 
-        testCaseOutputRepository.save(output);
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
+        System.out.println("Navigating to 'Open New Account' page...");
+        driver.findElement(By.linkText("Open New Account")).click();
+
+        System.out.println("Current URL after navigating to 'Open New Account': " + driver.getCurrentUrl());
+
+        // Select account type
+        System.out.println("Selecting account type: " + accountType);
+        WebElement accountTypeDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("type")));
+        Select accountTypeSelect = new Select(accountTypeDropdown);
+        accountTypeSelect.selectByVisibleText(accountType);
+
+        // Select "From Account"
+        WebElement fromAccountDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("fromAccountId")));
+        Select fromAccountSelect = new Select(fromAccountDropdown);
+        fromAccountSelect.selectByVisibleText(accountNumber);
+
+        // Click "Open New Account" button
+        WebElement createButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//input[@type='button' and @value='Open New Account']")));
+        createButton.click();
+
+        seleniumService.handleAlert();
+        seleniumService.checkForErrorMessage();
+
+        // Verify success message
+        WebElement successMessage = wait.until(ExpectedConditions.visibilityOfElementLocated(
+                By.xpath("//*[@id='openAccountResult']/p")));
+        Assert.assertEquals(successMessage.getText(), "Congratulations, your account is now open.", "Account opening was not successful.");
+        System.out.println("Open account was successful, and the message is displayed.");
     }
 }
