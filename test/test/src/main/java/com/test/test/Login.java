@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
@@ -16,20 +15,21 @@ public class Login {
     private static SeleniumService seleniumService = new SeleniumService();
 
     @Autowired
-    public Login(SeleniumService seleniumService) {
+    public Login(SeleniumService seleniumService, TestCaseOutputRepository testCaseOutputRepository) {
         this.seleniumService = seleniumService;
     }
 
 
 
     public static String runLogin(String username, String password, String browser) {
-        WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
         seleniumService.setUp(browser);
+        WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
+
         String result;
 
         try {
             login(driver, username, password); // Call the testLogin method with only the username
-            result = "Test completed successfully."; // Indicate success
+            result = "Logged in successfully."; // Indicate success
 
         } catch (AssertionError e) {
             result = "Login Test failed: " + e.getMessage(); // Capture assertion failures

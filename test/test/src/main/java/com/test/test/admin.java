@@ -5,6 +5,8 @@ import org.openqa.selenium.devtools.v121.fedcm.model.Account;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
 import org.openqa.selenium.support.ui.WebDriverWait;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -13,8 +15,10 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+@Service
 public class admin {
 
+    @Autowired
     private static final ThreadLocal<WebDriver> driverThreadLocal = new ThreadLocal<>();
     private static final SeleniumService seleniumService = new SeleniumService();
 
