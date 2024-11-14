@@ -1,6 +1,8 @@
 package com.test.test;
 
-import org.openqa.selenium.*;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,93 +10,88 @@ import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Service
 public class Login {
-    private static SeleniumService seleniumService = new SeleniumService();
+    private final SeleniumService seleniumService;
+    private final TestCaseOutputRepository testCaseOutputRepository;
 
     @Autowired
-    public Login(SeleniumService seleniumService) {
+    public Login(SeleniumService seleniumService, TestCaseOutputRepository testCaseOutputRepository) {
         this.seleniumService = seleniumService;
+        this.testCaseOutputRepository = testCaseOutputRepository;
     }
 
-
-
-    public static String runLogin(String username, String password, String browser) {
-        WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
-        seleniumService.setUp(browser);
-        String result;
-
-        try {
-            login(driver, username, password); // Call the testLogin method with only the username
-            result = "Test completed successfully."; // Indicate success
-
-        } catch (AssertionError e) {
-            result = "Login Test failed: " + e.getMessage(); // Capture assertion failures
-        } catch (WebDriverException e) {
-            result = "WebDriver error: " + e.getMessage(); // Capture WebDriver-specific errors
-        } catch (Exception e) {
-            result = "Login Test encountered an error: " + e.getMessage(); // Capture other exceptions
-        } finally {
-            seleniumService.tearDown(); // Ensure the teardown happens regardless of test success
-        }
-
-        return result; // Return the result after cleanup
-    }
-    public static TestCaseResult runLogin1(String username, String password, String browser) {
-        //WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
-        seleniumService.setUp(browser);
-        WebDriver driver = seleniumService.getDriver();
-        String result;
-        String start = LocalDateTime.now().toString();
-        String end = "";
-        boolean success = false;
-        try {
-            login(driver, username, password); // Call the testLogin method with only the username
-            end = LocalDateTime.now().toString();
-            result = "Test completed successfully."; // Indicate success
-            success = true;
-        } catch (AssertionError e) {
-            result = "Login Test failed: " + e.getMessage(); // Capture assertion failures
-        } catch (WebDriverException e) {
-            result = "WebDriver error: " + e.getMessage(); // Capture WebDriver-specific errors
-        } catch (Exception e) {
-            result = "Login Test encountered an error: " + e.getMessage(); // Capture other exceptions
-        } finally {
-            seleniumService.tearDown(); // Ensure the teardown happens regardless of test success
-        }
-        TestCaseResult tcr = new TestCaseResult(start,end,success,result);
-        return tcr; // Return the result after cleanup
-    }
-
-
-    public static void login(WebDriver driver, String username, String password) {
+    public void login(WebDriver driver, String username, String password) {
+        // Ensure driver is not null before starting
+//        if (driver == null) {
+//            throw new IllegalStateException("WebDriver instance is null. Make sure the WebDriver is properly initialized.");
+//        }
 
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
-        WebElement usernameInput = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath("//input[@name='username' and @type='text']")
-        ));
+        WebElement usernameInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("username")));
+        WebElement passwordInput = wait.until(ExpectedConditions.visibilityOfElementLocated(By.name("password")));
+
         usernameInput.sendKeys(username);
-
-        WebElement passwordInput = wait.until(ExpectedConditions.visibilityOfElementLocated(
-                By.xpath("//input[@name='password' and @type='password']")
-        ));
         passwordInput.sendKeys(password);
+        driver.findElement(By.xpath("//input[@value='Log In']")).click();
 
-        WebElement loginButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//input[@type='submit' and @value='Log In']")));
-        loginButton.click();
-
-        // Handle potential alerts and check for any error messages
         seleniumService.handleAlert();
         seleniumService.checkForErrorMessage();
 
-        String currentUrl = driver.getCurrentUrl();
-        Assert.assertEquals(currentUrl, "https://parabank.parasoft.com/parabank/overview.htm", "Login was not successful.");
-        //driver.quit();
+        Assert.assertEquals(driver.getCurrentUrl(), "https://parabank.parasoft.com/parabank/overview.htm", "Login was not successful.");
+    }
+
+    private void saveTestResult(String testCaseId, String startTime, String endTime, Long timeTaken, String result, boolean success) {
+        System.out.println("uploading file to database");
+        TestCaseOutput output = new TestCaseOutput();
+        output.setTestCaseId(testCaseId);
+        output.setStartTime(startTime);
+        output.setEndTime(endTime);
+        output.setTimeTaken(timeTaken);
+        output.setStatus(success ? "Success" : "Failure");
+        output.setErrorMessage(success ? "No Error" : result);
+
+        testCaseOutputRepository.save(output);
+    }
+
+
+
+    public String runLogin(String username, String password, String browser) {
+        seleniumService.setUp(browser);
+        WebDriver driver = seleniumService.getDriver();
+        String result;
+        String startTime = LocalDateTime.now().toString();
+        boolean success = false;
+        long timeTaken = 0;
+
+        try {
+            // Record start time
+            long start = System.nanoTime();
+
+            login(driver, username, password);
+
+            // Record end time
+            long end = System.nanoTime();
+
+            // Calculate time taken in milliseconds
+            timeTaken = (end - start) / 1_000_000;
+
+            result = "Login Test completed successfully.";
+            success = true;
+        } catch (Exception e) {
+            result = "Login Test encountered an error: " + e.getMessage();
+        } finally {
+            if (driver != null) {
+                seleniumService.tearDown();
+            }
+        }
+
+        saveTestResult("LoginTest", startTime, LocalDateTime.now().toString(), timeTaken, result, success);
+        return result;
     }
 
 }
