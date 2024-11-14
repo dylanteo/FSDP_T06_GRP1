@@ -105,11 +105,7 @@
 			<artifactId>mongodb-driver-core</artifactId>
 			<version>4.9.1</version> <!-- Use the latest stable version -->
 		</dependency>
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>1.7.32</version> <!-- You can use the latest version -->
-		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-logging</artifactId>
@@ -130,19 +126,11 @@
 
 		</dependency>
 
-			<!-- SLF4J API -->
-		<dependency>
-			<groupId>org.slf4j</groupId>
-			<artifactId>slf4j-api</artifactId>
-			<version>2.0.0</version> <!-- Use the latest version -->
-		</dependency>
+		<!-- SLF4J API -->
+
 
 		<!-- Logback as the SLF4J implementation -->
-		<dependency>
-			<groupId>ch.qos.logback</groupId>
-			<artifactId>logback-classic</artifactId>
-			<version>1.4.0</version> <!-- Use the latest version -->
-		</dependency>
+
 
 		<dependency>
 			<groupId>org.mockito</groupId>
@@ -156,6 +144,22 @@
 			<version>4.9.1</version> <!-- Make sure to use the latest version -->
 		</dependency>
 
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.32</version> <!-- or the latest 1.7.x version -->
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.2.11</version> <!-- or the latest compatible version with Spring Boot -->
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.2.11</version> <!-- Ensure this matches with logback-classic -->
+		</dependency>
 
 
 
@@ -175,7 +179,7 @@
 				<version>3.3.1</version>
 				<configuration>
 					<includes>
-						<include>**/*.java</include>
+						<include>*/.java</include>
 					</includes>
 					<properties>
 						<configurationParameters>
