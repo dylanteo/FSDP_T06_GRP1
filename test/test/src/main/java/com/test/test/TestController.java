@@ -1,46 +1,46 @@
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import javax.tools.JavaCompiler;
-import javax.tools.ToolProvider;
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Controller
-@RestController // Use @RestController to directly return JSON responses
-@RequestMapping("/api") // Set a base URL path for all endpoints
+@RestController
+@RequestMapping("/api")
 public class TestController {
 
     @Autowired
-    private Login login; // Inject Login service
-
-
+    private SeleniumService seleniumService;
 
     @Autowired
-    private Register register; // Inject Register service
+    private Login login;
+
+    @Autowired
+    private Register register;
 
     @Autowired
     private OpenAccount openAccount;
 
     @Autowired
-    private forgetLogin forgetLogin; // Inject forgetLogin service
+    private forgetLogin forgetLogin;
 
     @Autowired
-    private admin admin; // Inject admin service
+    private admin admin;
 
-    // Endpoint to retrieve all test results from MongoDB
     @Autowired
     private TestCaseOutputRepository testCaseOutputRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    private void saveAndBroadcastResult(TestCaseOutput testCaseOutput) {
+        testCaseOutputRepository.save(testCaseOutput);
+        messagingTemplate.convertAndSend("/topic/testResults", testCaseOutput);
+    }
 
     @GetMapping("/getTestResults")
     public List<TestCaseOutput> getTestResults() {
@@ -49,66 +49,60 @@ public class TestController {
 
     @GetMapping("/testingForgotLoginInfo")
     public String testForgotLoginInfo() {
-        return forgetLogin.runForgotLoginInfo("chrome");
+        String result = forgetLogin.runForgotLoginInfo("chrome");
+        saveTestResult("ForgotLoginInfoTest", result);
+        return result;
     }
 
     @GetMapping("/testinglogin")
     public String testLogin() {
-        return login.runLogin("A", "A", "firefox");
+        String result = login.runLogin("B", "A", "firefox");
+        saveTestResult("LoginTest", result);
+        return result;
     }
 
     @GetMapping("/signup")
     public String signup() {
-        return register.runRegister("hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "chrome");
+        String result = register.runRegister("hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "chrome");
+        saveTestResult("SignupTest", result);
+        return result;
     }
 
     @GetMapping("/openaccount")
-    public String openAccount() {
-        return openAccount.runOpenNewAccount("A", "A", "CHECKING", "14121", "chrome");
+    public String openaccount() {
+        String result = openAccount.runOpenNewAccount("test", "test", "SAVINGS", "14010", "chrome");
+        saveTestResult("OpenAccountTest", result);
+        return result;
     }
 
     @GetMapping("/managerLogin")
     public String managerLogin() {
-        return admin.runBankManagerLogin("chrome");
+        String result = admin.runBankManagerLogin("chrome");
+        saveTestResult("ManagerLoginTest", result);
+        return result;
     }
 
     @GetMapping("/addcustomer")
     public String addCustomer() {
-        return admin.runAddCustomer("chrome", "yes", "yes", "yes");
+        String result = admin.runAddCustomer("chrome", "yes", "yes", "yes");
+        saveTestResult("AddCustomerTest", result);
+        return result;
     }
 
-    @GetMapping("/addcustomer1")
-    public String addCustomer1() {
-        String result1 = admin.runAddCustomer("chrome", "yes", "yes", "yes");
-        String result2 = admin.runAddCustomer("chrome", "yes", "yes", "yes");
-        return "First run result: " + result1 + "<br>" + "Second run result: " + result2;
-    }
-    @GetMapping("/executeTest")
-    public ResponseEntity<String> executeTest(@RequestParam String className) {
-        try {
-            // Dynamically compile the test class from the file
-            String filePath = "src/main/java/com/test/test/" + className + ".java"; // Assuming it's uploaded here
-            compileJavaFile(filePath);
+    private void saveTestResult(String testCaseId, String result) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String startTime = LocalDateTime.now().format(formatter);
+        String endTime = LocalDateTime.now().format(formatter);
+        boolean success = result.contains("successfully");
 
-            // Dynamically load and run the compiled class
-            Class<?> testClass = Class.forName("com.test.test." + className);  // Fully qualified name
-            Method method = testClass.getMethod("testMethod");  // Assuming test method is named `testMethod`
-            Object testInstance = testClass.getDeclaredConstructor().newInstance();
-            method.invoke(testInstance);  // Run the test method
+        TestCaseOutput testCaseOutput = new TestCaseOutput();
+        testCaseOutput.setTestCaseId(testCaseId);
+        testCaseOutput.setStartTime(startTime);
+        testCaseOutput.setEndTime(endTime);
+        testCaseOutput.setStatus(success ? "Success" : "Failure");
+        testCaseOutput.setTimeTaken(5000);
+        testCaseOutput.setErrorMessage(success ? "No Error" : result);
 
-            return ResponseEntity.ok("Test executed successfully!");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error executing test: " + e.getMessage());
-        }
-    }
-
-    private void compileJavaFile(String filePath) throws Exception {
-        // Prepare a JavaCompiler to dynamically compile the .java file
-        JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-        int result = compiler.run(null, null, null, filePath);
-        if (result != 0) {
-            throw new Exception("Compilation failed for file: " + filePath);
-        }
+        saveAndBroadcastResult(testCaseOutput);
     }
 }
