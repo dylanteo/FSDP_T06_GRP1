@@ -10,6 +10,8 @@ const TestResultsTable = ({ testResults }) => {
         : [...prevState, id]
     );
   };
+    const sortedResults = [...testResults].sort((a, b) => b.testCaseId - a.testCaseId);
+
 
   return (
     <div className="test-results">
@@ -26,7 +28,7 @@ const TestResultsTable = ({ testResults }) => {
           </tr>
         </thead>
         <tbody>
-          {testResults.map((result) => (
+          {sortedResults.map((result) => (
             <React.Fragment key={result.testCaseId}>
               {/* Main test case row */}
               <tr onClick={() => toggleRowExpansion(result.testCaseId)} className="test-row">

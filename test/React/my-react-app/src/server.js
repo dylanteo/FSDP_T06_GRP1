@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
 const { exec } = require('child_process');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 
@@ -12,6 +13,32 @@ app.use(cors({
   methods: ['POST', 'GET'],
   allowedHeaders: ['Content-Type']
 }));
+
+const mongoUri = 'mongodb+srv://yanhui:yanhui@cluster0.sse7e.mongodb.net/TestCaseOutput1?retryWrites=true&w=majority';
+const client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+const dbName = 'TestCaseOutput1';
+const collectionName = 'testCaseOutputs';
+
+let db;
+client.connect()
+  .then(() => {
+    db = client.db(dbName); // Select database
+    console.log('Connected to MongoDB');
+  })
+  .catch((err) => console.error('Error connecting to MongoDB:', err));
+app.get('/api/testResults', async (req, res) => {
+try {
+  const testResultsCollection = db.collection(collectionName);
+  const testResults = await testResultsCollection.find().toArray();
+  res.json(testResults);
+} catch (err) {
+  console.error('Error fetching test results:', err);
+  res.status(500).json({
+    error: 'Error fetching test results.',
+    details: err.message
+  });
+}
+});
 
 // Define the exact target directory using absolute path
 const uploadDir = path.join(__dirname, '..', '..', '..', 'test', 'src', 'main', 'java', 'com', 'test', 'test');
