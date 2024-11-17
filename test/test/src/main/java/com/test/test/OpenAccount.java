@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
 import java.time.Duration;
+import java.util.List;
 
 @Service
 public class OpenAccount {
@@ -24,9 +25,9 @@ public class OpenAccount {
         this.loginHelper = loginHelper;
     }
 
-    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber,String Browser) {
-        WebDriver driver = seleniumService.getDriver("chrome"); // Get the driver from SeleniumService
+    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber, String Browser) {
         seleniumService.setUp(Browser);
+        WebDriver driver = seleniumService.getDriver();
 
         String result;
 
@@ -64,8 +65,9 @@ public class OpenAccount {
 
         // Select "From Account"
         WebElement fromAccountDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("fromAccountId")));
+        wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(By.xpath("//select[@id='fromAccountId']/option"), 0));
         Select fromAccountSelect = new Select(fromAccountDropdown);
-        fromAccountSelect.selectByVisibleText(accountNumber);
+        fromAccountSelect.selectByValue(accountNumber);
 
         // Click "Open New Account" button
         WebElement createButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//input[@type='button' and @value='Open New Account']")));

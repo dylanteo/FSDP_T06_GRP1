@@ -1,157 +1,334 @@
-import React, { useState } from 'react';
+//import React, { useState, useEffect } from 'react';
+//import TestResultsTable from './components/TestResultsTable';
+//import CsvUploader from './components/CsvUploader';
+//import BrowserSelector from './components/BrowserSelector';
+//import TestAnalytics from './components/TestAnalytics';
+//import './css/App.css';
+//
+//function App() {
+//  const [testResults, setTestResults] = useState([]);
+//  const [loading, setLoading] = useState(true);
+//  const [isCsvUploaderVisible, setIsCsvUploaderVisible] = useState(false);
+//  const [selectedBrowsers, setSelectedBrowsers] = useState([]);
+//  const [javaFile, setJavaFile] = useState(null);
+//  const [uploadStatus, setUploadStatus] = useState(null);
+//
+//useEffect(() => {
+//    const fetchTestResults = async () => {
+//      try {
+//        console.log('Fetching test results...');
+//        const response = await fetch('http://localhost:5000/api/testResults');
+//
+//        if (!response.ok) {
+//          throw new Error(`Error fetching test results: ${response.statusText}`);
+//        }
+//
+//        const data = await response.json();
+//        console.log('Received test results:', data); // Debug log
+//
+//        if (!Array.isArray(data)) {
+//          throw new Error('Received data is not an array');
+//        }
+//
+//        setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+//        setError(null);
+//      } catch (error) {
+//        console.error('Error fetching test results:', error);
+//        setError(error.message);
+//      } finally {
+//        setLoading(false);
+//      }
+//    };
+//
+//    fetchTestResults();
+//  }, []);
+//
+//
+//  // Use useEffect to handle file upload when javaFile state changes
+//  useEffect(() => {
+//    if (javaFile) {
+//      uploadJavaFile();
+//    }
+//  }, [javaFile]);
+//
+//  const toggleCsvUploader = () => {
+//    setIsCsvUploaderVisible(!isCsvUploaderVisible);
+//  };
+//
+//  const handleJavaFileChange = (e) => {
+//    const file = e.target.files[0];
+//    if (file && file.name.endsWith('.java')) {
+//      setJavaFile(file);
+//      setUploadStatus('Preparing upload...');
+//    } else {
+//      alert('Please upload a valid Java file (.java)');
+//      setUploadStatus(null);
+//    }
+//  };
+//
+//  const uploadJavaFile = async () => {
+//    const formData = new FormData();
+//    formData.append('file', javaFile);
+//
+//    try {
+//      setUploadStatus('Uploading...');
+//
+//      const response = await fetch('http://localhost:5000/api/upload', {
+//        method: 'POST',
+//        body: formData,
+//      });
+//
+//      if (!response.ok) {
+//        throw new Error(`HTTP error! status: ${response.status}`);
+//      }
+//
+//      const data = await response.json();
+//      console.log('Upload response:', data);
+//      setUploadStatus('Upload successful!');
+//      alert('Java file uploaded successfully!');
+//
+//      // Clear the file input
+//      const fileInput = document.getElementById('javaFileInput');
+//      if (fileInput) fileInput.value = '';
+//      setJavaFile(null);
+//
+//    } catch (error) {
+//      console.error('Error uploading Java file:', error);
+//      setUploadStatus(`Error uploading file: ${error.message}`);
+//      alert(`Error uploading file: ${error.message}`);
+//    }
+//  };
+//
+//  const handleUploadButtonClick = () => {
+//    document.getElementById('javaFileInput').click();
+//  };
+//
+//  const startTests = () => {
+//    console.log('Starting tests with browsers:', selectedBrowsers);
+//  };
+//
+//  return (
+//    <div className="App">
+//      <header className="app-header">
+//        <h1>Test Results Dashboard</h1>
+//      </header>
+//
+//      <div className="controls">
+//        <button className="btn upload-btn" onClick={toggleCsvUploader}>
+//          {isCsvUploaderVisible ? 'Hide CSV Uploader' : 'Upload CSV'}
+//        </button>
+//        <button
+//          className="btn create-btn"
+//          onClick={handleUploadButtonClick}
+//          disabled={uploadStatus === 'Uploading...'}
+//        >
+//          Upload Java Test Case
+//        </button>
+//        <button className="btn run-tests-btn" onClick={startTests}>
+//          Start Tests
+//        </button>
+//      </div>
+//
+//      {isCsvUploaderVisible && <CsvUploader setTestCases={setTestResults} />}
+//
+//      <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
+//
+//      <TestAnalytics testResults={testResults} />
+//
+//      {loading ? (
+//        <p>Loading test results...</p>
+//      ) : (
+//        <TestResultsTable testResults={testResults} />
+//      )}
+//
+//      <input
+//        id="javaFileInput"
+//        type="file"
+//        accept=".java"
+//        style={{ display: 'none' }}
+//        onChange={handleJavaFileChange}
+//      />
+//
+//      {uploadStatus && (
+//        <div className={`upload-status ${uploadStatus.includes('Error') ? 'error' : ''}`}>
+//          {uploadStatus}
+//        </div>
+//      )}
+//    </div>
+//  );
+//}
+//
+//export default App;
+import React, { useState, useEffect } from 'react';
+import TestResultsTable from './components/TestResultsTable';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
-import TestCaseTable from './components/TestCaseTable';
-import TestResultsTable from './components/TestResultsTable'; // New Test Results Table
+import TestAnalytics from './components/TestAnalytics';
 import './css/App.css';
 
 function App() {
-  const [testCases, setTestCases] = useState([]);
+  const [testResults, setTestResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);  // Added error state
+  const [isCsvUploaderVisible, setIsCsvUploaderVisible] = useState(false);
   const [selectedBrowsers, setSelectedBrowsers] = useState([]);
-  const [testResults, setTestResults] = useState([]); // Initialize empty state for test results
-  const [loading, setLoading] = useState(false); // New loading state
+  const [javaFile, setJavaFile] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
 
-  const [filters, setFilters] = useState({
-    priority: 'All',
-    feature: 'All',
-  });
+  useEffect(() => {
+    const fetchTestResults = async () => {
+      try {
+        console.log('Fetching test results...');
+        const response = await fetch('http://localhost:5000/api/testResults');
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prevFilters) => ({
-      ...prevFilters,
-      [name]: value,
-    }));
+        if (!response.ok) {
+          throw new Error(`Error fetching test results: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Received test results:', data); // Debug log
+
+        if (!Array.isArray(data)) {
+          throw new Error('Received data is not an array');
+        }
+
+        setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+        setError(null);
+      } catch (error) {
+        console.error('Error fetching test results:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTestResults();
+  }, []);
+
+  // Use useEffect to handle file upload when javaFile state changes
+  useEffect(() => {
+    if (javaFile) {
+      uploadJavaFile();
+    }
+  }, [javaFile]); // We'll address the exhaustive-deps warning later if needed
+
+  const toggleCsvUploader = () => {
+    setIsCsvUploaderVisible(!isCsvUploaderVisible);
   };
 
-  const filterTestCases = (testCase) => {
-    if (filters.priority !== 'All' && testCase.priority !== filters.priority) {
-      return false;
+  const handleJavaFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file && file.name.endsWith('.java')) {
+      setJavaFile(file);
+      setUploadStatus('Preparing upload...');
+    } else {
+      alert('Please upload a valid Java file (.java)');
+      setUploadStatus(null);
     }
-    if (filters.feature !== 'All' && testCase.feature !== filters.feature) {
-      return false;
-    }
-    return true;
   };
 
-  const runTests = async () => {
-    console.log('Running tests...');
-    console.log('Test Cases:', testCases);
-    console.log('Browsers:', selectedBrowsers);
-
-    // Set loading to true to disable the button
-    setLoading(true);
-
-    // Convert test cases to JSON format if the server expects JSON
-    const testCasesData = testCases.map(tc => ({
-      username: tc.username,
-      password: tc.password,
-      browser: tc.browser
-    }));
-    console.log("testcasedata", testCasesData);
+  const uploadJavaFile = async () => {
+    const formData = new FormData();
+    formData.append('file', javaFile);
 
     try {
-      const response = await fetch('http://localhost:8080/api/testinglogin3', {
+      setUploadStatus('Uploading...');
+
+      const response = await fetch('http://localhost:5000/api/upload', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json', // Set content type to JSON
-        },
-        body: JSON.stringify(testCasesData), // Send the JSON data
+        body: formData,
       });
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.text();
-      console.log('Response:', data);
+      const data = await response.json();
+      console.log('Upload response:', data);
+      setUploadStatus('Upload successful!');
+      alert('Java file uploaded successfully!');
 
-      const resultsArray = JSON.parse(data);
-      const parsedResults = resultsArray.map((result, index) => {
-        const { testCaseId, startTime, endTime, success, errorMessage } = result;
-        return {
-          testCaseId: testCaseId || `TestCase ${index + 1}`,
-          startTime: startTime || 'N/A',
-          endTime: endTime || 'N/A',
-          success: success || false,
-          errorMessage: errorMessage || 'No errors',
-        };
-      });
+      // Clear the file input
+      const fileInput = document.getElementById('javaFileInput');
+      if (fileInput) fileInput.value = '';
+      setJavaFile(null);
 
-      await fetch('http://localhost:5000/api/test-results', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(parsedResults),
-      });
-
-      setTestResults(parsedResults);
     } catch (error) {
-      console.error('Error running tests:', error);
-    } finally {
-      // Set loading to false to re-enable the button
-      setLoading(false);
+      console.error('Error uploading Java file:', error);
+      setUploadStatus(`Error uploading file: ${error.message}`);
+      alert(`Error uploading file: ${error.message}`);
     }
+  };
+
+  const handleUploadButtonClick = () => {
+    document.getElementById('javaFileInput').click();
+  };
+
+  const startTests = () => {
+    console.log('Starting tests with browsers:', selectedBrowsers);
   };
 
   return (
     <div className="App">
-      <div className="sidebar">
-        <h2>Test Case Manager</h2>
-        <ul>
-          <li>Create Test Case</li>
-          <li>Move Folder</li>
-          <li>Edit Folder</li>
-          <li>Delete</li>
-        </ul>
-      </div>
-      <div className="content">
-        <div className="header">
-          <button className="btn import">Import via CSV</button>
-          <button className="btn create">Create Test Case</button>
+      <header className="app-header">
+        <h1>Test Results Dashboard</h1>
+      </header>
+
+      {/* Add error display */}
+      {error && (
+        <div className="error-message" style={{ color: 'red', padding: '10px' }}>
+          Error: {error}
         </div>
+      )}
 
-        <CsvUploader setTestCases={setTestCases} />
-
-        {/* Filtering Section */}
-        <div className="filters">
-          <label>
-            Priority:
-            <select name="priority" value={filters.priority} onChange={handleFilterChange}>
-              <option value="All">All</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </label>
-          <label>
-            Feature:
-            <select name="feature" value={filters.feature} onChange={handleFilterChange}>
-              <option value="All">All</option>
-              <option value="Authentication">Authentication</option>
-              <option value="Registration">Registration</option>
-              <option value="Search">Search</option>
-            </select>
-          </label>
-        </div>
-
-        {testCases.length > 0 && (
-          <>
-            <TestCaseTable testCases={testCases.filter(filterTestCases)} />
-            <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
-            <button
-              className="btn run-tests"
-              onClick={runTests}
-              disabled={loading} // Disable the button if loading is true
-            >
-              {loading ? 'Running Tests...' : 'Run Tests'}
-            </button>
-          </>
-        )}
-
-        <TestResultsTable testResults={testResults} /> {/* Updated Test Results Table */}
+      <div className="controls">
+        <button className="btn upload-btn" onClick={toggleCsvUploader}>
+          {isCsvUploaderVisible ? 'Hide CSV Uploader' : 'Upload CSV'}
+        </button>
+        <button
+          className="btn create-btn"
+          onClick={handleUploadButtonClick}
+          disabled={uploadStatus === 'Uploading...'}
+        >
+          Upload Java Test Case
+        </button>
+        <button className="btn run-tests-btn" onClick={startTests}>
+          Start Tests
+        </button>
       </div>
+
+      {isCsvUploaderVisible && <CsvUploader setTestCases={setTestResults} />}
+
+      <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
+
+      {/* Add data debugging display */}
+      {!loading && testResults.length === 0 && !error && (
+        <div className="warning-message" style={{ color: 'orange', padding: '10px' }}>
+          No test results found in the database
+        </div>
+      )}
+
+      <TestAnalytics testResults={testResults} />
+
+      {loading ? (
+        <p>Loading test results...</p>
+      ) : (
+        <TestResultsTable testResults={testResults} />
+      )}
+
+      <input
+        id="javaFileInput"
+        type="file"
+        accept=".java"
+        style={{ display: 'none' }}
+        onChange={handleJavaFileChange}
+      />
+
+      {uploadStatus && (
+        <div className={`upload-status ${uploadStatus.includes('Error') ? 'error' : ''}`}>
+          {uploadStatus}
+        </div>
+      )}
     </div>
   );
 }

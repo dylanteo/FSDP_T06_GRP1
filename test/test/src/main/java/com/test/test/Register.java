@@ -15,7 +15,6 @@ import java.time.Duration;
 @Service
 public class Register {
     private SeleniumService seleniumService;
-    private WebDriver driver;
 
     @Autowired
     public Register() {
@@ -26,11 +25,11 @@ public class Register {
 
     public String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password,String browser) {
         seleniumService.setUp(browser);
-        driver = seleniumService.getDriver(browser);
+        WebDriver driver = seleniumService.getDriver();
         String result;
 
         try {
-            register(firstName, lastName, address, city, state, zipCode, phone, ssn, username, password); // Call the testLogin method with only the username
+            register(driver, firstName, lastName, address, city, state, zipCode, phone, ssn, username, password); // Call the testLogin method with only the username
             result = "Test completed successfully."; // Indicate success
         } catch (AssertionError e) {
             result = "Test failed: " + e.getMessage(); // Capture assertion failures
@@ -45,7 +44,7 @@ public class Register {
         return result; // Return the result after cleanup
     }
 
-    public void register(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
+    public void register(WebDriver driver, String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 
