@@ -1,3 +1,4 @@
+//server.js
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -5,6 +6,8 @@ const fs = require('fs');
 const cors = require('cors');
 const { exec } = require('child_process');
 const { MongoClient } = require('mongodb');
+const xml2js = require('xml2js');
+require('dotenv').config();
 
 const app = express();
 
@@ -14,11 +17,13 @@ app.use(cors({
   allowedHeaders: ['Content-Type']
 }));
 
-const mongoUri = 'mongodb+srv://yanhui:yanhui@cluster0.sse7e.mongodb.net/TestCaseOutput1?retryWrites=true&w=majority';
+
+
+const mongoUri = process.env.MONGO_URI;
 const client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
 const dbName = 'TestCaseOutput1';
 const collectionName = 'testCaseOutputs';
-
+// retreive test results from database.
 let db;
 client.connect()
   .then(() => {
@@ -39,10 +44,10 @@ try {
   });
 }
 });
-
+//using multer to upload test case
 // Define the exact target directory using absolute path
 const uploadDir = path.join(__dirname, '..', '..', '..', 'test', 'src', 'main', 'java', 'com', 'test', 'test');
-
+// compile and run the uploaded test case
 // Function to compile and run the uploaded Java file using Maven
 async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
   return new Promise((resolve, reject) => {
@@ -178,3 +183,19 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+
+//const mongoUri1 = process.env.MONGO_URI;
+//const client1 = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
+//const dbName1 = 'TestCaseOutput1';
+//const collectionName1 = 'TestResults';
+//let db;
+//client1.connect()
+//  .then(() => {
+//    db = client.db(dbName1); // Select database
+//    console.log('Connected to MongoDB');
+//  })
+//  .catch((err) => console.error('Error connecting to MongoDB:', err));
+//app.get('/api/postTestResults', async (req, res) => {
+//
+//}
