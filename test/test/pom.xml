@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.3</version>
+		<version>3.2.4</version>  <!-- Updated to latest secure version -->
 		<relativePath/>
 	</parent>
 	<groupId>com.test</groupId>
@@ -15,6 +15,8 @@
 	<description>Demo project for Spring Boot</description>
 	<properties>
 		<java.version>17</java.version>
+		<commons-io.version>2.15.1</commons-io.version>  <!-- Explicitly define commons-io version -->
+		<commons-compress.version>1.26.0</commons-compress.version>  <!-- Explicitly define commons-compress version -->
 	</properties>
 	<dependencies>
 		<!-- Spring Boot Starters -->
@@ -103,6 +105,20 @@
 			<artifactId>annotations</artifactId>
 			<version>24.1.0</version>
 			<scope>compile</scope>
+		</dependency>
+
+		<!-- Explicitly add commons-io with safe version -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
+		</dependency>
+
+		<!-- Explicitly add commons-compress with safe version -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-compress</artifactId>
+			<version>${commons-compress.version}</version>
 		</dependency>
 	</dependencies>
 
