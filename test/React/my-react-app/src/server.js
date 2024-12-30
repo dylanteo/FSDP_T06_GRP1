@@ -201,7 +201,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     };
 
     // Use a new collection to store Java files
-    const javaFilesCollection = db.collection('javaTestCodes');  // Use a new collection
+    const javaFilesCollection = db.collection('javaTestCodes');
 
     // Check if a document with the same filename already exists
     const existingFile = await javaFilesCollection.findOne({ filename: req.file.filename });
@@ -218,9 +218,34 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       const insertResult = await javaFilesCollection.insertOne(javaFileDocument);
       console.log('Java file saved to MongoDB:', insertResult);
     }
+
     const testClassName = req.file.filename.replace('.java', '');
     console.log('Compiling and running test with Maven...');
     const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+
+    // After running tests, read the ExtentReports.html
+    const reportFilePath = path.join('../../../test/test/test-output', 'ExtentReports.html');
+    console.log(reportFilePath);
+    if (fs.existsSync(reportFilePath)) {
+      const reportContent = fs.readFileSync(reportFilePath, 'utf8');
+
+      // Define the document to insert/update for the test report
+      const reportDocument = {
+        reportName: 'ExtentReports.html',
+        content: reportContent,
+        reportDate: new Date(),  // Timestamp when the report was generated
+        javaFile:req.file.originalname,
+      };
+
+      const reportsCollection = db.collection('testReports');  // Use a separate collection for test reports
+
+      // Insert the report into the database
+      const insertReportResult = await reportsCollection.insertOne(reportDocument);
+      console.log('Test report saved to MongoDB:', insertReportResult);
+    } else {
+      console.log('Test report not found.');
+    }
+
     // Optionally delete the file after it's saved to DB
     fs.unlinkSync(uploadedFilePath);
     console.log('File deleted after saving to DB.');
@@ -233,7 +258,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         originalName: req.file.originalname,
         size: req.file.size
       },
-      message: 'Java file uploaded and saved to MongoDB.',
+      message: 'Java file uploaded and saved to MongoDB, and report saved to DB.',
     });
 
   } catch (err) {
