@@ -299,7 +299,39 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
+// Fetch all Java code from MongoDB
+app.get('/api/all-java-code', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+  try {
+    const javaFilesCollection = db.collection('javaTestCodes');
+    const javaFiles = await javaFilesCollection.find().toArray();
+    res.json(javaFiles);
+  } catch (err) {
+    console.error('Error fetching Java files:', err);
+    res.status(500).json({
+      error: 'Error fetching Java files.',
+      details: err.message
+    });
+  }
+});
 
+// Fetch all reports from MongoDB
+app.get('/api/all-reports', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+  try {
+    const reportsCollection = db.collection('testReports');
+    const reports = await reportsCollection.find().toArray();
+    res.json(reports);
+  } catch (err) {
+    console.error('Error fetching reports:', err);
+    res.status(500).json({
+      error: 'Error fetching reports.',
+      details: err.message
+    });
+  }
+});
 
-// things to do
-// add code to database

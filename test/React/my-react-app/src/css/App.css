@@ -281,3 +281,13 @@ th {
 .pagination span strong {
   font-weight: bold;
 }
+
+.code-snippet {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  color: #333;
+  background-color: #f4f4f4;
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+}

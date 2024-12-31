@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 const TestResultsTable = ({ testResults }) => {
   const [expandedRows, setExpandedRows] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 50;
+  const rowsPerPage = 25;
 
   const toggleRowExpansion = (id) => {
     setExpandedRows((prevState) =>
