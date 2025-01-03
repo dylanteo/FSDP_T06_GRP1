@@ -7,14 +7,21 @@ const CodeTable = ({ javaCode }) => {
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isExecuting, setIsExecuting] = useState(false);
 
-  const formatDate = (dateString) => {
-    const day = dateString.slice(0, 2);
-    const month = dateString.slice(2, 4);
-    const year = `20${dateString.slice(4, 6)}`;
-    const hours = dateString.slice(6, 8);
-    const minutes = dateString.slice(8, 10);
-    return `${day}-${month}-${year} ${hours}:${minutes}`;
-  };
+    const formatDate = (dateString) => {
+      const date = new Date(dateString); // Parse the ISO string (including timezone info)
+      const options = {
+        timeZone: 'Asia/Singapore',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      };
+      const formattedDate = new Intl.DateTimeFormat('en-SG', options).format(date);
+      return formattedDate.replace(',', ''); // Removes the comma between date and time
+    };
 
   const handleSeeMoreClick = (fileContent) => {
     const newWindow = window.open();

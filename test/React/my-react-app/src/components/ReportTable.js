@@ -5,7 +5,21 @@ import React, { useState } from 'react';
 
 const ReportTable = ({ reports }) => {
   const [expandedReports, setExpandedReports] = useState([]);
-
+  const formatDate = (dateString) => {
+    const date = new Date(dateString); // Parse the ISO string (including timezone info)
+    const options = {
+      timeZone: 'Asia/Singapore',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    };
+    const formattedDate = new Intl.DateTimeFormat('en-SG', options).format(date);
+    return formattedDate.replace(',', ''); // Removes the comma between date and time
+  };
   const toggleExpand = (reportId) => {
     setExpandedReports((prevExpandedReports) =>
       prevExpandedReports.includes(reportId)
@@ -39,7 +53,7 @@ const ReportTable = ({ reports }) => {
               <tr className="test-row">
                 <td>{report._id}</td>
                 <td>{report.javaFile}</td>
-                <td>{report.reportDate}</td>
+                <td>{formatDate(report.reportDate)}</td>
                 <td>
                     <button
                       className="btn create-btn"
