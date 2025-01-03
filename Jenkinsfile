@@ -28,9 +28,9 @@ pipeline {
         stage('Run Development Server') {
             steps {
                 script {
-                    // Run npm run dev in the app directory to start the development server
+                    // Run npm run dev in the background to start the development server
                     dir(APP_DIR) {
-                        bat 'npm run dev'
+                        bat 'start /B npm run dev'
                     }
                 }
             }
