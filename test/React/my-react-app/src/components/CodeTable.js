@@ -1,8 +1,11 @@
+//CodeTable.js
 import React, { useState } from 'react';
 
 const CodeTable = ({ javaCode }) => {
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [runningStatus, setRunningStatus] = useState({});
+  const [selectedFiles, setSelectedFiles] = useState(new Set());
+  const [isExecuting, setIsExecuting] = useState(false);
 
   const formatDate = (dateString) => {
     const day = dateString.slice(0, 2);
@@ -23,13 +26,11 @@ const CodeTable = ({ javaCode }) => {
     setRunningStatus(prev => ({ ...prev, [filename]: 'running' }));
 
     try {
-      // Create a FormData object to send the file
       const formData = new FormData();
       const blob = new Blob([javaCode.find(file => file.filename === filename).content],
         { type: 'text/x-java' });
       formData.append('file', blob, filename);
 
-      // Send the request to the server
       const response = await fetch('http://localhost:5000/api/upload', {
         method: 'POST',
         body: formData,
@@ -42,75 +43,115 @@ const CodeTable = ({ javaCode }) => {
       const result = await response.json();
       setRunningStatus(prev => ({ ...prev, [filename]: 'completed' }));
 
-      // Show success message
-      alert('Code executed successfully!');
-
     } catch (error) {
       console.error('Error running code:', error);
       setRunningStatus(prev => ({ ...prev, [filename]: 'error' }));
-      alert('Error running code: ' + error.message);
+      throw error;
     }
   };
 
-  const getStatusButton = (filename) => {
-      const status = runningStatus[filename];
+  const handleRunSelected = async () => {
+    setIsExecuting(true);
+    const selectedFilesArray = Array.from(selectedFiles);
 
-      const baseButtonClass = "btn create-btn mt-2 text-blue-600 hover:text-blue-800";
-
-      switch (status) {
-        case 'running':
-          return (
-            <button className={`${baseButtonClass} bg-yellow-500 hover:bg-yellow-600 animate-pulse`} disabled>
-              Running...
-            </button>
-          );
-        case 'completed':
-          return (
-            <button className={`${baseButtonClass} bg-green-500 hover:bg-green-600`}
-                    onClick={() => handleRunCode(filename)}>
-              Run Again
-            </button>
-          );
-        case 'error':
-          return (
-            <button className={`${baseButtonClass} bg-red-500 hover:bg-red-600`}
-                    onClick={() => handleRunCode(filename)}>
-              Retry
-            </button>
-          );
-        default:
-          return (
-            <button className={`${baseButtonClass} bg-blue-500 hover:bg-blue-600`}
-                    onClick={() => handleRunCode(filename)}>
-              Run
-            </button>
-          );
+    for (const filename of selectedFilesArray) {
+      try {
+        await handleRunCode(filename);
+      } catch (error) {
+        alert(`Error running ${filename}: ${error.message}`);
+        break;
       }
-    };
+    }
+
+    setIsExecuting(false);
+    alert('Finished executing selected files');
+  };
+
+  const toggleFileSelection = (filename) => {
+    const newSelected = new Set(selectedFiles);
+    if (newSelected.has(filename)) {
+      newSelected.delete(filename);
+    } else {
+      newSelected.add(filename);
+    }
+    setSelectedFiles(newSelected);
+  };
+
+  const getStatusButton = (filename) => {
+    const status = runningStatus[filename];
+    const baseButtonClass = "px-3 py-1 rounded text-white";
+
+    switch (status) {
+      case 'running':
+        return (
+          <span className={`${baseButtonClass} bg-yellow-500`}>
+            Running...
+          </span>
+        );
+      case 'completed':
+        return (
+          <span className={`${baseButtonClass} bg-green-500`}>
+            Completed
+          </span>
+        );
+      case 'error':
+        return (
+          <span className={`${baseButtonClass} bg-red-500`}>
+            Error
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="java-code-section">
-      <h3 className="text-xl font-bold mb-4">Java Code Files</h3>
-      <table className="test-results w-full">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-xl font-bold">Java Code Files</h3>
+        <button
+          onClick={handleRunSelected}
+          disabled={selectedFiles.size === 0 || isExecuting}
+          className={`px-4 py-2 rounded ${
+            selectedFiles.size === 0 || isExecuting
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-500 hover:bg-blue-600 text-white'
+          }`}
+        >
+          {isExecuting ? 'Executing...' : `Run Selected (${selectedFiles.size})`}
+        </button>
+      </div>
+
+      <table className="w-full border-collapse">
         <thead>
           <tr className="bg-gray-100">
-            <th className="p-2">File Name</th>
-            <th className="p-2">Code</th>
-            <th className="p-2">Date Uploaded</th>
-            <th className="p-2">Actions</th>
+            <th className="p-2 text-left">Select</th>
+            <th className="p-2 text-left">File Name</th>
+            <th className="p-2 text-left">Code</th>
+            <th className="p-2 text-left">Date Uploaded</th>
+            <th className="p-2 text-left">Status</th>
           </tr>
         </thead>
         <tbody>
           {javaCode.map((file, index) => (
-            <tr key={index} className="test-row border-b">
+            <tr key={index} className="border-b">
+              <td className="p-2">
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.has(file.filename)}
+                  onChange={() => toggleFileSelection(file.filename)}
+                  disabled={isExecuting}
+                  className="w-4 h-4"
+                />
+              </td>
               <td className="p-2">{file.filename}</td>
               <td className="p-2">
-                <pre className="code-snippet bg-gray-50 p-2 rounded">
+                <pre className="bg-gray-50 p-2 rounded">
                   {file.content.substring(0, 100) + '...'}
                 </pre>
                 {file.content.length > 100 && (
                   <button
-                    className="btn create-btn mt-2 text-blue-600 hover:text-blue-800"
+                    className="text-blue-600 hover:text-blue-800 mt-2"
                     onClick={() => handleSeeMoreClick(file.content)}
                   >
                     See More

@@ -14,13 +14,13 @@ const ReportTable = ({ reports }) => {
     );
   };
 
-  const openReportInNewWindow = (reportContent) => {
-    const newWindow = window.open('', '_blank', 'width=800,height=600');
-    newWindow.document.write('<html><head><title>Report</title></head><body>');
-    newWindow.document.write(reportContent); // Assuming reportContent contains HTML
-    newWindow.document.write('</body></html>');
-    newWindow.document.close();
-  };
+    const openReportInNewTab = (reportContent) => {
+      const newTab = window.open();
+      newTab.document.write('<html><head><title>Report</title></head><body>');
+      newTab.document.write(reportContent); // Assuming reportContent contains HTML
+      newTab.document.write('</body></html>');
+      newTab.document.close();
+    };
 
   return (
     <div className="report-table">
@@ -41,12 +41,12 @@ const ReportTable = ({ reports }) => {
                 <td>{report.javaFile}</td>
                 <td>{report.reportDate}</td>
                 <td>
-                  <button
-                    className="btn create-btn"
-                    onClick={() => openReportInNewWindow(report.content)} // Open full report in new window
-                  >
-                    See More
-                  </button>
+                    <button
+                      className="btn create-btn"
+                      onClick={() => openReportInNewTab(report.content)} // Open full report in new tab
+                    >
+                      See More
+                    </button>
                 </td>
               </tr>
 
