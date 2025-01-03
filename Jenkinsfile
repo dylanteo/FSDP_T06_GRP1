@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Define the directory where the app is located
-        APP_DIR = 'my-react-app'
+        APP_DIR = 'test/React/my-react-app'
     }
 
     stages {
@@ -25,34 +25,12 @@ pipeline {
             }
         }
 
-        stage('Build React App') {
+        stage('Run Development Server') {
             steps {
                 script {
-                    // Build the React app
+                    // Run npm run dev in the app directory to start the development server
                     dir(APP_DIR) {
-                        sh 'npm run build'
-                    }
-                }
-            }
-        }
-
-        stage('Start Backend') {
-            steps {
-                script {
-                    // Start the backend server
-                    dir(APP_DIR) {
-                        sh 'npm run start:backend'
-                    }
-                }
-            }
-        }
-
-        stage('Start Frontend') {
-            steps {
-                script {
-                    // Start the React app frontend
-                    dir(APP_DIR) {
-                        sh 'npm run start'
+                        sh 'npm run dev'
                     }
                 }
             }
@@ -61,10 +39,10 @@ pipeline {
 
     post {
         success {
-            echo 'Build and deployment were successful.'
+            echo 'Development server started successfully.'
         }
         failure {
-            echo 'Build or deployment failed.'
+            echo 'Failed to start the development server.'
         }
     }
 }
