@@ -19,7 +19,7 @@ pipeline {
                 script {
                     // Navigate to the app directory and install npm dependencies
                     dir(APP_DIR) {
-                        sh 'npm install'
+                        bat 'npm install'
                     }
                 }
             }
@@ -30,7 +30,7 @@ pipeline {
                 script {
                     // Run npm run dev in the app directory to start the development server
                     dir(APP_DIR) {
-                        sh 'npm run dev'
+                        bat 'npm run dev'
                     }
                 }
             }
