@@ -183,9 +183,6 @@ function App() {
         )}
 
         <div className="controls">
-          <button className="btn upload-btn" onClick={toggleCsvUploader}>
-            {isCsvUploaderVisible ? 'Hide CSV Uploader' : 'Upload CSV'}
-          </button>
           <button
             className="btn create-btn"
             onClick={handleUploadButtonClick}
@@ -193,14 +190,7 @@ function App() {
           >
             Upload Java Test Case
           </button>
-          <button className="btn run-tests-btn" onClick={startTests}>
-            {testInProgress ? 'Tests In Progress...' : 'Start Tests'}
-          </button>
         </div>
-
-        {isCsvUploaderVisible && <CsvUploader setTestCases={setTestResults} />}
-
-        <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
 
         {!loading && testResults.length === 0 && !error && (
           <div className="warning-message" style={{ color: 'orange', padding: '10px' }}>

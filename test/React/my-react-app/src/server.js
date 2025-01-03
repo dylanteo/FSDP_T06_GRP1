@@ -95,50 +95,6 @@ if (!fs.existsSync(testOutputDir)) {
   fs.mkdirSync(testOutputDir, { recursive: true });
 }
 
-// Function to compile and run the uploaded Java file using Maven
-async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
-  return new Promise((resolve, reject) => {
-    const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
-    const projectDir = path.join(__dirname, '..', '..', '..', 'test');
-
-    console.log('Project directory:', projectDir);
-    console.log('Running command:', `${mvnCommand} clean compile`);
-
-    exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
-      if (compileError) {
-        console.error('Compilation stderr:', compileStderr);
-        console.error('Compilation stdout:', compileStdout);
-        reject(new Error(`Maven compilation failed: ${compileStderr}`));
-        return;
-      }
-
-      console.log('Compilation successful. Running tests...');
-
-      exec(`${mvnCommand} exec:java -Dexec.mainClass="com.test.test.${testClassName}"`,
-        { cwd: projectDir },
-        (runError, runStdout, runStderr) => {
-          if (runError) {
-            console.error('Test execution stderr:', runStderr);
-            console.error('Test execution stdout:', runStdout);
-            reject(new Error(`Test execution failed: ${runStderr}`));
-            return;
-          }
-
-          // Check if report was generated
-          const reportPath = path.join(projectDir, 'test-output', 'ExtentReports.html');
-          if (fs.existsSync(reportPath)) {
-            console.log('Test report generated successfully');
-          }
-
-          resolve({
-            output: runStdout,
-            reportPath: '/reports/ExtentReports.html'
-          });
-      });
-    });
-  });
-}
-
 // File upload middleware setup
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -175,111 +131,117 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
+//compile and run java files uploaded
+async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
+  return new Promise((resolve, reject) => {
+    const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
+    const projectDir = path.join(__dirname, '..', '..', '..', 'test');
 
+    exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
+      if (compileError) {
+        return reject(new Error(`Compilation failed: ${compileStderr}`));
+      }
+      exec(`${mvnCommand} exec:java -Dexec.mainClass="com.test.test.${testClassName}"`, { cwd: projectDir }, (runError, runStdout, runStderr) => {
+        if (runError) {
+          return reject(new Error(`Execution failed: ${runStderr}`));
+        }
+        resolve({
+          output: runStdout,
+          reportPath: path.join(projectDir, 'test-output', 'ExtentReports.html'),
+        });
+      });
+    });
+  });
+}
 
-// Handle file upload and processing
+//saves the java file uploaded to database
+async function saveJavaFileToDB(file, fileContent) {
+  const javaFilesCollection = db.collection('javaTestCodes');
+  const javaFileDocument = {
+    filename: file.filename,
+    originalName: file.originalname,
+    size: file.size,
+    content: fileContent,
+    uploadDate: new Date(),
+  };
+  const existingFile = await javaFilesCollection.findOne({ filename: file.filename });
+  if (existingFile) {
+    return javaFilesCollection.updateOne({ filename: file.filename }, { $set: javaFileDocument });
+  }
+  return javaFilesCollection.insertOne(javaFileDocument);
+}
+
+//saves the report file to the database
+async function saveTestReportToDB(reportContent, javaFile) {
+  const reportsCollection = db.collection('testReports');
+  const reportDocument = {
+    reportName: 'ExtentReports.html',
+    content: reportContent,
+    reportDate: new Date(),
+    javaFile,
+  };
+  return reportsCollection.insertOne(reportDocument);
+}
+
+// Endpoint: Upload and run Java file
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
 
   const uploadedFilePath = path.join(uploadDir, req.file.filename);
-  console.log('File uploaded successfully:', uploadedFilePath);
-
   try {
-    // Read the content of the uploaded Java file
     const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
-    console.log('File content read successfully.');
-
-    // Define the document to insert or update in MongoDB
-    const javaFileDocument = {
-      filename: req.file.filename,
-      originalName: req.file.originalname,
-      size: req.file.size,
-      content: fileContent,   // Store the entire content of the uploaded Java file
-      uploadDate: new Date(),  // Timestamp when the file was uploaded
-    };
-
-    // Use a new collection to store Java files
-    const javaFilesCollection = db.collection('javaTestCodes');
-
-    // Check if a document with the same filename already exists
-    const existingFile = await javaFilesCollection.findOne({ filename: req.file.filename });
-
-    if (existingFile) {
-      // If the file already exists, update the existing document
-      const updateResult = await javaFilesCollection.updateOne(
-        { filename: req.file.filename },  // Find by filename
-        { $set: javaFileDocument }        // Update the document with new content
-      );
-      console.log('Java file updated in MongoDB:', updateResult);
-    } else {
-      // If the file doesn't exist, insert a new document
-      const insertResult = await javaFilesCollection.insertOne(javaFileDocument);
-      console.log('Java file saved to MongoDB:', insertResult);
-    }
+    await saveJavaFileToDB(req.file, fileContent);
 
     const testClassName = req.file.filename.replace('.java', '');
-    console.log('Compiling and running test with Maven...');
     const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
 
-    // After running tests, read the ExtentReports.html
-    const reportFilePath = path.join('../../../test/test/test-output', 'ExtentReports.html');
-    console.log(reportFilePath);
-    if (fs.existsSync(reportFilePath)) {
-      const reportContent = fs.readFileSync(reportFilePath, 'utf8');
-
-      // Define the document to insert/update for the test report
-      const reportDocument = {
-        reportName: 'ExtentReports.html',
-        content: reportContent,
-        reportDate: new Date(),  // Timestamp when the report was generated
-        javaFile:req.file.originalname,
-      };
-
-      const reportsCollection = db.collection('testReports');  // Use a separate collection for test reports
-
-      // Insert the report into the database
-      const insertReportResult = await reportsCollection.insertOne(reportDocument);
-      console.log('Test report saved to MongoDB:', insertReportResult);
-    } else {
-      console.log('Test report not found.');
+    if (fs.existsSync(result.reportPath)) {
+      const reportContent = fs.readFileSync(result.reportPath, 'utf8');
+      await saveTestReportToDB(reportContent, req.file.originalname);
     }
 
-    // Optionally delete the file after it's saved to DB
     fs.unlinkSync(uploadedFilePath);
-    console.log('File deleted after saving to DB.');
 
-    // Respond to the client
     res.json({
       success: true,
-      file: {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        size: req.file.size
-      },
-      message: 'Java file uploaded and saved to MongoDB, and report saved to DB.',
+      message: 'Java file processed and report saved.',
     });
-
   } catch (err) {
     console.error('Error processing file:', err);
-    res.status(500).json({
-      error: 'Error processing file.',
-      details: err.message
-    });
-
-    // Cleanup uploaded file in case of error
-    try {
-      if (fs.existsSync(uploadedFilePath)) {
-        fs.unlinkSync(uploadedFilePath);
-        console.log('File deleted after error.');
-      }
-    } catch (cleanupError) {
-      console.error('Error during cleanup:', cleanupError);
+    if (fs.existsSync(uploadedFilePath)) {
+      fs.unlinkSync(uploadedFilePath);
     }
+    res.status(500).json({ error: 'Error processing file.', details: err.message });
   }
 });
 
+app.post('/api/upload-code', upload.single('file'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file uploaded' });
+  }
+
+  try {
+    const codeDocument = {
+      filename: req.file.originalname,
+      content: req.file.buffer.toString('utf8'),
+      uploadDate: new Date(),
+      size: req.file.size
+    };
+
+    const result = await db.collection('javaTestCodes').insertOne(codeDocument);
+
+    res.json({
+      success: true,
+      fileId: result.insertedId,
+      filename: codeDocument.filename
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -334,4 +296,152 @@ app.get('/api/all-reports', async (req, res) => {
     });
   }
 });
+
+// Handle file upload and processing
+//app.post('/api/upload', upload.single('file'), async (req, res) => {
+//  if (!req.file) {
+//    return res.status(400).json({ error: 'No file uploaded.' });
+//  }
+//
+//  const uploadedFilePath = path.join(uploadDir, req.file.filename);
+//  console.log('File uploaded successfully:', uploadedFilePath);
+//
+//  try {
+//    // Read the content of the uploaded Java file
+//    const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
+//    console.log('File content read successfully.');
+//
+//    // Define the document to insert or update in MongoDB
+//    const javaFileDocument = {
+//      filename: req.file.filename,
+//      originalName: req.file.originalname,
+//      size: req.file.size,
+//      content: fileContent,   // Store the entire content of the uploaded Java file
+//      uploadDate: new Date(),  // Timestamp when the file was uploaded
+//    };
+//
+//    // Use a new collection to store Java files
+//    const javaFilesCollection = db.collection('javaTestCodes');
+//
+//    // Check if a document with the same filename already exists
+//    const existingFile = await javaFilesCollection.findOne({ filename: req.file.filename });
+//
+//    if (existingFile) {
+//      // If the file already exists, update the existing document
+//      const updateResult = await javaFilesCollection.updateOne(
+//        { filename: req.file.filename },  // Find by filename
+//        { $set: javaFileDocument }        // Update the document with new content
+//      );
+//      console.log('Java file updated in MongoDB:', updateResult);
+//    } else {
+//      // If the file doesn't exist, insert a new document
+//      const insertResult = await javaFilesCollection.insertOne(javaFileDocument);
+//      console.log('Java file saved to MongoDB:', insertResult);
+//    }
+//
+//    const testClassName = req.file.filename.replace('.java', '');
+//    console.log('Compiling and running test with Maven...');
+//    const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+//
+//    // After running tests, read the ExtentReports.html
+//    const reportFilePath = path.join('../../../test/test/test-output', 'ExtentReports.html');
+//    console.log(reportFilePath);
+//    if (fs.existsSync(reportFilePath)) {
+//      const reportContent = fs.readFileSync(reportFilePath, 'utf8');
+//
+//      // Define the document to insert/update for the test report
+//      const reportDocument = {
+//        reportName: 'ExtentReports.html',
+//        content: reportContent,
+//        reportDate: new Date(),  // Timestamp when the report was generated
+//        javaFile:req.file.originalname,
+//      };
+//
+//      const reportsCollection = db.collection('testReports');  // Use a separate collection for test reports
+//
+//      // Insert the report into the database
+//      const insertReportResult = await reportsCollection.insertOne(reportDocument);
+//      console.log('Test report saved to MongoDB:', insertReportResult);
+//    } else {
+//      console.log('Test report not found.');
+//    }
+//
+//    // Optionally delete the file after it's saved to DB
+//    fs.unlinkSync(uploadedFilePath);
+//    console.log('File deleted after saving to DB.');
+//
+//    // Respond to the client
+//    res.json({
+//      success: true,
+//      file: {
+//        filename: req.file.filename,
+//        originalName: req.file.originalname,
+//        size: req.file.size
+//      },
+//      message: 'Java file uploaded and saved to MongoDB, and report saved to DB.',
+//    });
+//
+//  } catch (err) {
+//    console.error('Error processing file:', err);
+//    res.status(500).json({
+//      error: 'Error processing file.',
+//      details: err.message
+//    });
+//
+//    // Cleanup uploaded file in case of error
+//    try {
+//      if (fs.existsSync(uploadedFilePath)) {
+//        fs.unlinkSync(uploadedFilePath);
+//        console.log('File deleted after error.');
+//      }
+//    } catch (cleanupError) {
+//      console.error('Error during cleanup:', cleanupError);
+//    }
+//  }
+//});
+
+//// Function to compile and run the uploaded Java file using Maven
+//async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
+//  return new Promise((resolve, reject) => {
+//    const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
+//    const projectDir = path.join(__dirname, '..', '..', '..', 'test');
+//
+//    console.log('Project directory:', projectDir);
+//    console.log('Running command:', `${mvnCommand} clean compile`);
+//
+//    exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
+//      if (compileError) {
+//        console.error('Compilation stderr:', compileStderr);
+//        console.error('Compilation stdout:', compileStdout);
+//        reject(new Error(`Maven compilation failed: ${compileStderr}`));
+//        return;
+//      }
+//
+//      console.log('Compilation successful. Running tests...');
+//
+//      exec(`${mvnCommand} exec:java -Dexec.mainClass="com.test.test.${testClassName}"`,
+//        { cwd: projectDir },
+//        (runError, runStdout, runStderr) => {
+//          if (runError) {
+//            console.error('Test execution stderr:', runStderr);
+//            console.error('Test execution stdout:', runStdout);
+//            reject(new Error(`Test execution failed: ${runStderr}`));
+//            return;
+//          }
+//
+//          // Check if report was generated
+//          const reportPath = path.join(projectDir, 'test-output', 'ExtentReports.html');
+//          if (fs.existsSync(reportPath)) {
+//            console.log('Test report generated successfully');
+//          }
+//
+//          resolve({
+//            output: runStdout,
+//            reportPath: '/reports/ExtentReports.html'
+//          });
+//      });
+//    });
+//  });
+//}
+
 
