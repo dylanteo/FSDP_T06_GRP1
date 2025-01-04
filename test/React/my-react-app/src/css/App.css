@@ -291,3 +291,25 @@ th {
   border-radius: 5px;
   overflow-x: auto;
 }
+
+.run-selected-btn {
+  background-color: #007bff;
+  color: white;
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.run-selected-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.run-selected-btn:disabled {
+  background-color: #c0c0c0;
+  cursor: not-allowed;
+}

@@ -190,29 +190,39 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 
   const uploadedFilePath = path.join(uploadDir, req.file.filename);
+  const testClassName = req.file.filename.replace('.java', '');
+  let result;
+
   try {
+    // Step 1: Compile and run the Java file with Maven
+    console.log('Compiling and running test with Maven...');
+    result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+
+    // Step 2: If compilation is successful, save the Java file to the database
     const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
     await saveJavaFileToDB(req.file, fileContent);
 
-    const testClassName = req.file.filename.replace('.java', '');
-    const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
-
+    // Step 3: If report exists, save the report to the database
     if (fs.existsSync(result.reportPath)) {
       const reportContent = fs.readFileSync(result.reportPath, 'utf8');
       await saveTestReportToDB(reportContent, req.file.originalname);
     }
 
+    // Step 4: Clean up the uploaded file
     fs.unlinkSync(uploadedFilePath);
 
+    // Respond with success
     res.json({
       success: true,
       message: 'Java file processed and report saved.',
     });
   } catch (err) {
     console.error('Error processing file:', err);
+    // If there is an error during any of the steps, clean up the uploaded file
     if (fs.existsSync(uploadedFilePath)) {
       fs.unlinkSync(uploadedFilePath);
     }
+    // If compilation fails, the file will not be saved to the database
     res.status(500).json({ error: 'Error processing file.', details: err.message });
   }
 });

@@ -38,6 +38,9 @@ const ReportTable = ({ reports }) => {
 
   return (
     <div className="report-table">
+    <div className="test-results">
+      <h3 className="text-xl font-bold">Extensive report results</h3>
+      </div>
       <table className="test-results">
         <thead>
           <tr>
@@ -59,7 +62,7 @@ const ReportTable = ({ reports }) => {
                       className="btn create-btn"
                       onClick={() => openReportInNewTab(report.content)} // Open full report in new tab
                     >
-                      See More
+                      View Report
                     </button>
                 </td>
               </tr>

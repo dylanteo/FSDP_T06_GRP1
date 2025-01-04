@@ -113,20 +113,20 @@ const CodeTable = ({ javaCode }) => {
   };
 
   return (
+
+    <div className="test-results">
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold">Java Code Files</h3>
-        <button
-          onClick={handleRunSelected}
-          disabled={selectedFiles.size === 0 || isExecuting}
-          className={`px-4 py-2 rounded ${
-            selectedFiles.size === 0 || isExecuting
-              ? 'bg-gray-300 cursor-not-allowed'
-              : 'bg-blue-500 hover:bg-blue-600 text-white'
-          }`}
-        >
-          {isExecuting ? 'Executing...' : `Run Selected (${selectedFiles.size})`}
-        </button>
+            <button
+              onClick={handleRunSelected}
+              disabled={selectedFiles.size === 0 || isExecuting}
+              className={`run-selected-btn ${
+                selectedFiles.size === 0 || isExecuting ? 'cursor-not-allowed' : ''
+              }`}
+            >
+              {isExecuting ? 'Executing...' : `Run Selected (${selectedFiles.size})`}
+            </button>
       </div>
 
       <table className="w-full border-collapse">
@@ -173,6 +173,7 @@ const CodeTable = ({ javaCode }) => {
           ))}
         </tbody>
       </table>
+    </div>
     </div>
   );
 };
