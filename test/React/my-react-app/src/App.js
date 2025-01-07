@@ -1,46 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import TestResultsTable from './components/TestResultsTable';
+import CodeTable from './components/CodeTable';
+import ReportTable from './components/ReportTable';
 import CsvUploader from './components/CsvUploader';
 import BrowserSelector from './components/BrowserSelector';
 import TestAnalytics from './components/TestAnalytics';
 import './css/App.css';
 
 function App() {
+  const [reports, setReports] = useState([]);
   const [testResults, setTestResults] = useState([]);
+  const [javaCode, setJavaCode] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);  // Added error state
   const [isCsvUploaderVisible, setIsCsvUploaderVisible] = useState(false);
   const [selectedBrowsers, setSelectedBrowsers] = useState([]);
   const [javaFile, setJavaFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
+  const [testInProgress, setTestInProgress] = useState(false);
 
-  useEffect(() => {
-    const fetchTestResults = async () => {
+  // Function to fetch test results
+  const fetchTestResults = async () => {
+    try {
+      console.log('Fetching test results...');
+      const response = await fetch('http://localhost:5000/api/testResults');
+
+      if (!response.ok) {
+        throw new Error(`Error fetching test results: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Received test results:', data); // Debug log
+
+      if (!Array.isArray(data)) {
+        throw new Error('Received data is not an array');
+      }
+
+      setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching test results:', error);
+      setError(error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+    const fetchJavaFiles = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/getTestResults');
-        if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
+        const response = await fetch('http://localhost:5000/api/all-java-code');
+        if (!response.ok) {
+          throw new Error('Error fetching Java files');
+        }
         const data = await response.json();
-        setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+        setJavaCode(data);
       } catch (error) {
-        console.error('Error fetching test results:', error);
-      } finally {
-        setLoading(false);
+        console.error('Error fetching Java files:', error);
+        setError(error.message);
       }
     };
+    const fetchReports = async () => {
+        try {
+          const response = await fetch('http://localhost:5000/api/all-reports');
+          if (!response.ok) {
+            throw new Error('Error fetching reports');
+          }
+          const data = await response.json();
+          setReports(data);
+        } catch (error) {
+          console.error('Error fetching reports:', error);
+          setError(error.message);
+        }
+      };
 
-    fetchTestResults();
-  }, []);
-
-  // Use useEffect to handle file upload when javaFile state changes
+  // File upload handler
   useEffect(() => {
     if (javaFile) {
       uploadJavaFile();
     }
   }, [javaFile]);
 
+  // Toggle visibility of CSV uploader
   const toggleCsvUploader = () => {
     setIsCsvUploaderVisible(!isCsvUploaderVisible);
   };
 
+  // Handle Java file change
   const handleJavaFileChange = (e) => {
     const file = e.target.files[0];
     if (file && file.name.endsWith('.java')) {
@@ -52,6 +97,7 @@ function App() {
     }
   };
 
+  // Upload Java file to the backend
   const uploadJavaFile = async () => {
     const formData = new FormData();
     formData.append('file', javaFile);
@@ -85,63 +131,100 @@ function App() {
     }
   };
 
+  // Handle upload button click
   const handleUploadButtonClick = () => {
     document.getElementById('javaFileInput').click();
   };
 
+  // Start tests and simulate async behavior (set testInProgress to true)
   const startTests = () => {
     console.log('Starting tests with browsers:', selectedBrowsers);
+    setTestInProgress(true);
+
+    // Simulate the test process finishing and data refreshing
+    setTimeout(() => {
+      setTestInProgress(false);
+      console.log('Tests completed. Refreshing test results...');
+      fetchTestResults(); // Call to fetch new data
+    }, 5000);  // Example: wait 5 seconds for tests to complete
   };
 
+  // Periodically refresh test data (e.g., every 10 seconds)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (!testInProgress) {
+        console.log('Refreshing test results...');
+        fetchTestResults();
+      }
+    }, 300000);  // Refresh every 10 seconds
+
+    // Cleanup the interval on component unmount or when the test is in progress
+    return () => clearInterval(intervalId);
+  }, [testInProgress]);
+
+  // Initial data fetch when the component mounts
+  useEffect(() => {
+      fetchTestResults(); // Fetch test results
+      fetchJavaFiles(); // Fetch Java files
+      fetchReports();   // Fetch test reports
+    }, []);
+
   return (
-    <div className="App">
-      <header className="app-header">
-        <h1>Test Results Dashboard</h1>
-      </header>
+      <div className="App">
+        <header className="app-header">
+          <h1>Test Results Dashboard</h1>
+        </header>
 
-      <div className="controls">
-        <button className="btn upload-btn" onClick={toggleCsvUploader}>
-          {isCsvUploaderVisible ? 'Hide CSV Uploader' : 'Upload CSV'}
-        </button>
-        <button
-          className="btn create-btn"
-          onClick={handleUploadButtonClick}
-          disabled={uploadStatus === 'Uploading...'}
-        >
-          Upload Java Test Case
-        </button>
-        <button className="btn run-tests-btn" onClick={startTests}>
-          Start Tests
-        </button>
-      </div>
+        {/* Add error display */}
+        {error && (
+          <div className="error-message" style={{ color: 'red', padding: '10px' }}>
+            Error: {error}
+          </div>
+        )}
 
-      {isCsvUploaderVisible && <CsvUploader setTestCases={setTestResults} />}
-
-      <BrowserSelector setSelectedBrowsers={setSelectedBrowsers} />
-
-      <TestAnalytics testResults={testResults} />
-
-      {loading ? (
-        <p>Loading test results...</p>
-      ) : (
-        <TestResultsTable testResults={testResults} />
-      )}
-
-      <input
-        id="javaFileInput"
-        type="file"
-        accept=".java"
-        style={{ display: 'none' }}
-        onChange={handleJavaFileChange}
-      />
-
-      {uploadStatus && (
-        <div className={`upload-status ${uploadStatus.includes('Error') ? 'error' : ''}`}>
-          {uploadStatus}
+        <div className="controls">
+          <button
+            className="btn create-btn"
+            onClick={handleUploadButtonClick}
+            disabled={uploadStatus === 'Uploading...'}
+          >
+            Upload Java Test Case
+          </button>
         </div>
-      )}
-    </div>
-  );
-}
 
-export default App;
+        {!loading && testResults.length === 0 && !error && (
+          <div className="warning-message" style={{ color: 'orange', padding: '10px' }}>
+            No test results found in the database
+          </div>
+        )}
+
+        <TestAnalytics testResults={testResults} />
+
+        {loading ? (
+          <p>Loading test results...</p>
+        ) : (
+          <TestResultsTable testResults={testResults} />
+        )}
+
+        {/* Render Java Code and Reports Tables */}
+        <CodeTable javaCode={javaCode} />
+        <ReportTable reports={reports} />
+
+        <input
+          id="javaFileInput"
+          type="file"
+          accept=".java"
+          style={{ display: 'none' }}
+          onChange={handleJavaFileChange}
+        />
+
+        {uploadStatus && (
+          <div className={`upload-status ${uploadStatus.includes('Error') ? 'error' : ''}`}>
+            {uploadStatus}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  export default App;
