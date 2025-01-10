@@ -52,9 +52,50 @@ const ResultsPage = ({ testResults, reports }) => (
     <ReportTable reports={reports} />
   </div>
 );
+function parseHTMLContent(htmlContent) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlContent, 'text/html');
+
+  // Extract the test items
+  const testItems = [];
+
+  const testItemElements = doc.querySelectorAll('li.test-item');
+
+  testItemElements.forEach(testItemElement => {
+    const testData = {};
+
+    // Extract basic test data
+    testData.test_id = testItemElement.getAttribute('test-id');
+    testData.name = testItemElement.querySelector('p.name').textContent.trim();
+    testData.status = testItemElement.getAttribute('status');
+    testData.timestamp = testItemElement.querySelector('p.text-sm span').textContent.trim();
+    testData.duration = testItemElement.querySelectorAll('span')[1].textContent.trim();
+
+    // Extract event details
+    const events = [];
+    const eventRows = testItemElement.querySelectorAll('tr.event-row');
+
+    eventRows.forEach(eventRow => {
+      const event = {};
+      event.status = eventRow.querySelector('span').textContent.trim();
+      event.timestamp = eventRow.querySelectorAll('td')[1].textContent.trim();
+      event.details = eventRow.querySelectorAll('td')[2].textContent.trim();
+      events.push(event);
+    });
+
+    testData.events = events;
+
+    testItems.push(testData);
+  });
+
+  return { tests: testItems };
+}
+
+
 
 function App() {
   const [reports, setReports] = useState([]);
+  const [reportContent, setReportContent] = useState([]);  // Define the state here
   const [testResults, setTestResults] = useState([]);
   const [javaCode, setJavaCode] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +142,14 @@ function App() {
       }
       const data = await response.json();
       setReports(data);
+      if (data && Array.isArray(data) && data.length > 0) {
+            const reportHtml = data.map(report => report.content); // Extract _id from each report
+            const parsedReports = reportHtml.map(parseHTMLContent); // Convert HTML to structured JSON
+            console.log('Parsed Reports:', JSON.stringify(parsedReports, null, 2));  // The `null, 2` is for pretty-printing the JSON
+
+            setReportContent(parsedReports);
+//            console.log('All Report IDs:', reportHtml); // Log all _id values
+      }
     } catch (error) {
       setError(error.message);
     }
@@ -207,7 +256,7 @@ function App() {
               <Route path="/" element={<Navigate to="/analytics" />} />
               <Route
                 path="/analytics"
-                element={<AnalyticsPage testResults={testResults} />}
+                element={<AnalyticsPage testResults={reportContent} />}
               />
               <Route
                 path="/code"
