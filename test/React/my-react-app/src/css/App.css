@@ -699,3 +699,25 @@ th {
   border-radius: 8px;
   text-align: center;
 }
+input[type="datetime-local"] {
+  appearance: none;
+  background-color: #f8f9fa; /* Light gray background */
+  border: 1px solid #ced4da; /* Subtle border */
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem; /* Add padding for better click targets */
+  font-size: 1rem; /* Ensure readable font size */
+  color: #495057; /* Neutral text color */
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+input[type="datetime-local"]:focus {
+  outline: none;
+  border-color: #007bff; /* Highlight border in primary color on focus */
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Subtle shadow */
+}
+
+input[type="datetime-local"]:disabled {
+  background-color: #e9ecef; /* Dim background for disabled state */
+  color: #6c757d; /* Muted text color */
+  cursor: not-allowed; /* Change cursor to indicate non-interaction */
+}
