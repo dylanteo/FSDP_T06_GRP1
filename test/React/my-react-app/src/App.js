@@ -66,20 +66,27 @@ const StatisticsPage = ({ testResults }) => (
 function parseHTMLContent(htmlContent) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlContent, 'text/html');
+
+  // Extract the test items
   const testItems = [];
 
   const testItemElements = doc.querySelectorAll('li.test-item');
-  testItemElements.forEach((testItemElement) => {
+
+  testItemElements.forEach(testItemElement => {
     const testData = {};
+
+    // Extract basic test data
     testData.test_id = testItemElement.getAttribute('test-id');
     testData.name = testItemElement.querySelector('p.name').textContent.trim();
     testData.status = testItemElement.getAttribute('status');
     testData.timestamp = testItemElement.querySelector('p.text-sm span').textContent.trim();
     testData.duration = testItemElement.querySelectorAll('span')[1].textContent.trim();
 
+    // Extract event details
     const events = [];
     const eventRows = testItemElement.querySelectorAll('tr.event-row');
-    eventRows.forEach((eventRow) => {
+
+    eventRows.forEach(eventRow => {
       const event = {};
       event.status = eventRow.querySelector('span').textContent.trim();
       event.timestamp = eventRow.querySelectorAll('td')[1].textContent.trim();
@@ -88,10 +95,23 @@ function parseHTMLContent(htmlContent) {
     });
 
     testData.events = events;
+
     testItems.push(testData);
   });
 
-  return { tests: testItems };
+  // Extract and validate the date from the h3 tags
+  const dateRegex = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4} \d{1,2}:\d{2}:\d{2} [ap]m$/i;
+  const dateElements = doc.querySelectorAll('h3');
+  let date = null;
+
+  dateElements.forEach(element => {
+    const content = element.textContent.trim();
+    if (dateRegex.test(content)) {
+      date = content;  // If the content matches the date format, use it
+    }
+  });
+
+  return { tests: testItems, date: date }; // Include the date if found
 }
 
 function App() {
@@ -113,6 +133,8 @@ function App() {
       const reportHtml = data.map((report) => report.content);
       const parsedReports = reportHtml.map(parseHTMLContent);
       setReportContent(parsedReports);
+      setReports(data);
+      //console.log(JSON.stringify(parsedReports, null, 2));
     } catch (error) {
       setError(error.message);
     }

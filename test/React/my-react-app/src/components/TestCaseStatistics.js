@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -16,21 +16,105 @@ import { Pie, Line, Bar, Doughnut } from 'react-chartjs-2';
 ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
 
 const TestCaseStatistics = ({ testResults }) => {
+  const [selectedTestType, setSelectedTestType] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState('all');
+  const [selectedYear, setSelectedYear] = useState('all');
+
   if (!testResults || !testResults.length || !testResults[0].tests) {
     return <div>No data available for statistics.</div>;
   }
 
+  // Get all tests and filter based on selection
   const allTests = Array.isArray(testResults) ? testResults.flatMap(report => report.tests || []) : [];
-  const passedTests = allTests.filter(test => test.status === 'pass');
-  const failedTests = allTests.filter(test => test.status === 'fail');
 
-  const totalTests = allTests.length;
+  // Get unique test types
+  const testTypes = ['all', ...new Set(allTests.map(test => test.name.split(' ')[0]))];
+
+  // Get unique months
+  const months = ['all', ...new Set(testResults.map(result => {
+      const date = new Date(result.date);  // Parse the date string from the result
+      return date.toLocaleString('default', { month: 'short' });  // Get month name
+    }))].sort();
+//    console.log('All months', months)
+  // get unique years
+  const years = ['all', ...new Set(testResults.map(result => {
+      const date = new Date(result.date);  // Parse the date string from the result
+      return date.toLocaleString('default', { year: 'numeric' });  // Get month name
+    }))].sort();
+
+
+function getTestsByMonth(month) {
+  // Filter groups where the date contains the specified month
+  const filteredGroups = testResults.filter(group => {
+    const groupMonth = new Date(group.date).toLocaleString("en-US", { month: "short" });
+    return groupMonth.toLowerCase() === month.toLowerCase();
+  });
+
+  // Flatten and collect all tests from the filtered groups
+  return filteredGroups.flatMap(group => group.tests);
+}
+
+function getTestsByYear(year) {
+  // Filter groups where the date contains the specified year
+  const filteredGroups = testResults.filter(group => {
+    const groupYear = new Date(group.date).getFullYear(); // Extract year
+    return groupYear === year;
+  });
+
+  // Flatten and collect all tests from the filtered groups
+  return filteredGroups.flatMap(group => group.tests);
+}
+
+// Usage example
+const year = 2025; // Specify the year
+const testsForYear = getTestsByYear(year);
+
+console.log("year",testsForYear);
+
+// Usage example
+const month = "Dec"; // Specify the month
+const testsForMonth = getTestsByMonth(month);
+console.log("Month",testsForMonth);
+
+
+//console.log(testsForMonth);
+//testResults.forEach(result => {
+//  console.log(result.date);
+//});
+
+  // Filter tests based on selections
+const filteredTests = (() => {
+  let tests = allTests;
+
+  // Filter by year if selectedYear is not 'all'
+  if (selectedYear !== 'all') {
+    const yearTests = getTestsByYear(parseInt(selectedYear));
+    tests = tests.filter(test => yearTests.includes(test));
+  }
+
+  // Filter by month if selectedMonth is not 'all'
+  if (selectedMonth !== 'all') {
+    const monthTests = getTestsByMonth(selectedMonth);
+    tests = tests.filter(test => monthTests.includes(test));
+  }
+
+  // Further filter by test type
+  if (selectedTestType !== 'all') {
+    tests = tests.filter(test => test.name.split(' ')[0] === selectedTestType);
+  }
+
+  return tests;
+})();
+
+//console.log("Filtered Tests:", filteredTests);
+  const passedTests = filteredTests.filter(test => test.status === 'pass');
+  const failedTests = filteredTests.filter(test => test.status === 'fail');
 
   // **1. Average Test Duration (Line Chart)**
   const averageDurationPerBatch = [];
   const batchSize = 5;
-  for (let i = 0; i < allTests.length; i += batchSize) {
-    const batch = allTests.slice(i, i + batchSize);
+  for (let i = 0; i < filteredTests.length; i += batchSize) {
+    const batch = filteredTests.slice(i, i + batchSize);
     if (batch.length === 0) continue;
     const avgDuration = batch.reduce((sum, test) => {
       const [hours, minutes, seconds, ms] = test.duration.split(':').map(Number);
@@ -64,7 +148,7 @@ const TestCaseStatistics = ({ testResults }) => {
   };
 
   // **3. Error Type Distribution (Doughnut Chart)**
-  const errorCounts = allTests.reduce((acc, test) => {
+  const errorCounts = filteredTests.reduce((acc, test) => {
     const failEvents = test.events.filter(event => event.status === 'Fail');
     failEvents.forEach(event => {
       const errorMessage = event.details || 'Unknown Error';
@@ -86,8 +170,8 @@ const TestCaseStatistics = ({ testResults }) => {
 
   // **4. Test Case Category Performance (Bar Chart)**
   const categoryPerformance = {};
-  allTests.forEach(test => {
-    const category = test.name.split(' ')[0]; // Assume the first word in the name represents the category
+  filteredTests.forEach(test => {
+    const category = test.name.split(' ')[0];
     if (!categoryPerformance[category]) {
       categoryPerformance[category] = { pass: 0, fail: 0 };
     }
@@ -137,7 +221,7 @@ const TestCaseStatistics = ({ testResults }) => {
   const durationBins = [0, 5, 10, 15, 20, 30, 60];
   const durationDistribution = Array(durationBins.length).fill(0);
 
-  allTests.forEach(test => {
+  filteredTests.forEach(test => {
     const [hours, minutes, seconds] = test.duration.split(':').map(Number);
     const durationInSeconds = hours * 3600 + minutes * 60 + seconds;
 
@@ -162,34 +246,98 @@ const TestCaseStatistics = ({ testResults }) => {
 
   return (
     <div className="test-case-statistics">
+      <div className="filters-container p-4 bg-gray-50 rounded-lg mb-6">
+        <div className="flex gap-4">
+          <select
+            className="p-2 border rounded-md"
+            value={selectedTestType}
+            onChange={(e) => setSelectedTestType(e.target.value)}
+          >
+            {testTypes.map(type => (
+              <option key={type} value={type}>
+                {type === 'all' ? 'All Test Types' : type}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="p-2 border rounded-md"
+            value={selectedMonth}
+            onChange={(e) => {
+                setSelectedMonth(e.target.value);
+//                console.log('Selected Month:', e.target.value); // Log the selected month
+              }}
+          >
+            {months.map(month => (
+              <option key={month} value={month}>
+                {month === 'all' ? 'All Months' : ` ${month}`}
+              </option>
+            ))}
+          </select>
+          <select
+                      className="p-2 border rounded-md"
+                      value={selectedYear}
+                      onChange={(e) => setSelectedYear(e.target.value)}
+                    >
+                      {years.map(year => (
+                        <option key={year} value={year}>
+                          {year === 'all' ? 'All Years' : year}
+                        </option>
+                      ))}
+                    </select>
+        </div>
+      </div>
+
       <h2>Test Case Detailed Statistics</h2>
-      <div className="charts-container">
-        {/* Pass/Fail Distribution */}
-        <div className="chart-wrapper">
+            {/*
+      <div className="summary-stats p-4 mb-6 bg-white rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-2">Current Filter Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <p className="text-sm text-gray-600">Total Tests</p>
+            <p className="text-xl font-semibold">{filteredTests.length}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Passed</p>
+            <p className="text-xl font-semibold text-green-600">{passedTests.length}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Failed</p>
+            <p className="text-xl font-semibold text-red-600">{failedTests.length}</p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Pass Rate</p>
+            <p className="text-xl font-semibold">
+              {filteredTests.length > 0
+                ? ((passedTests.length / filteredTests.length) * 100).toFixed(1) + '%'
+                : '0%'}
+            </p>
+          </div>
+        </div>
+      </div>
+*/}
+      <div className="charts-container grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="chart-wrapper bg-white p-4 rounded-lg shadow">
           <h3>Pass/Fail Distribution</h3>
           <Pie data={pieChartData} />
         </div>
 
-        {/* Average Test Duration */}
-        <div className="chart-wrapper">
+        <div className="chart-wrapper bg-white p-4 rounded-lg shadow">
           <h3>Average Test Duration (seconds)</h3>
           <Line data={averageDurationData} />
         </div>
 
-        {/* Error Type Distribution */}
-        <div className="chart-wrapper">
+        <div className="chart-wrapper bg-white p-4 rounded-lg shadow">
           <h3>Error Type Distribution</h3>
           <Doughnut data={errorTypeData} />
         </div>
 
-        {/* Test Case Category Performance */}
-        <div className="chart-wrapper">
+        <div className="chart-wrapper bg-white p-4 rounded-lg shadow">
           <h3>Test Case Category Performance</h3>
           <Bar data={categoryChartData} />
         </div>
 
-        {/* Top Failing Test Cases */}
-        <div className="chart-wrapper">
+        <div className="chart-wrapper bg-white p-4 rounded-lg shadow">
           <h3>Top Failing Test Cases</h3>
           {Object.keys(failureCounts).length > 0 ? (
             <Bar data={topFailingTestsChartData} />
@@ -198,8 +346,7 @@ const TestCaseStatistics = ({ testResults }) => {
           )}
         </div>
 
-        {/* Execution Time Distribution */}
-        <div className="chart-wrapper">
+        <div className="chart-wrapper bg-white p-4 rounded-lg shadow">
           <h3>Execution Time Distribution</h3>
           <Bar data={durationChartData} />
         </div>
