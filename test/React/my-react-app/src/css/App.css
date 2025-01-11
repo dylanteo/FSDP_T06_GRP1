@@ -673,3 +673,29 @@ th {
 .failed {
   color: #ef4444;
 }
+
+
+.test-case-statistics {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.test-case-statistics h2 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.chart-wrapper {
+  background-color: #f8fafc;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}

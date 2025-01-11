@@ -1,10 +1,11 @@
-//App.js
+// App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import TestResultsTable from './components/TestResultsTable';
 import CodeTable from './components/CodeTable';
 import ReportTable from './components/ReportTable';
 import TestAnalytics from './components/TestAnalytics';
+import TestCaseStatistics from './components/TestCaseStatistics';  // New Import
 import './css/App.css';
 
 // Analytics Page Component
@@ -52,30 +53,33 @@ const ResultsPage = ({ testResults, reports }) => (
     <ReportTable reports={reports} />
   </div>
 );
+
+// **Statistics Page Component**
+const StatisticsPage = ({ testResults }) => (
+  <div className="page-container">
+    <h2>Test Case Statistics Dashboard</h2>
+    <TestCaseStatistics testResults={testResults} />
+  </div>
+);
+
+// Function to parse HTML report content into structured data
 function parseHTMLContent(htmlContent) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlContent, 'text/html');
-
-  // Extract the test items
   const testItems = [];
 
   const testItemElements = doc.querySelectorAll('li.test-item');
-
-  testItemElements.forEach(testItemElement => {
+  testItemElements.forEach((testItemElement) => {
     const testData = {};
-
-    // Extract basic test data
     testData.test_id = testItemElement.getAttribute('test-id');
     testData.name = testItemElement.querySelector('p.name').textContent.trim();
     testData.status = testItemElement.getAttribute('status');
     testData.timestamp = testItemElement.querySelector('p.text-sm span').textContent.trim();
     testData.duration = testItemElement.querySelectorAll('span')[1].textContent.trim();
 
-    // Extract event details
     const events = [];
     const eventRows = testItemElement.querySelectorAll('tr.event-row');
-
-    eventRows.forEach(eventRow => {
+    eventRows.forEach((eventRow) => {
       const event = {};
       event.status = eventRow.querySelector('span').textContent.trim();
       event.timestamp = eventRow.querySelectorAll('td')[1].textContent.trim();
@@ -84,33 +88,40 @@ function parseHTMLContent(htmlContent) {
     });
 
     testData.events = events;
-
     testItems.push(testData);
   });
 
   return { tests: testItems };
 }
 
-
-
 function App() {
   const [reports, setReports] = useState([]);
-  const [reportContent, setReportContent] = useState([]);  // Define the state here
+  const [reportContent, setReportContent] = useState([]);
   const [testResults, setTestResults] = useState([]);
   const [javaCode, setJavaCode] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [javaFile, setJavaFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
-  const [testInProgress, setTestInProgress] = useState(false);
 
-  // Your existing fetch functions remain the same
+  // Fetch test reports from the backend
+  const fetchReports = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/all-reports');
+      if (!response.ok) throw new Error('Error fetching reports');
+      const data = await response.json();
+      const reportHtml = data.map((report) => report.content);
+      const parsedReports = reportHtml.map(parseHTMLContent);
+      setReportContent(parsedReports);
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
   const fetchTestResults = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/testResults');
-      if (!response.ok) {
-        throw new Error(`Error fetching test results: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
       const data = await response.json();
       setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
       setError(null);
@@ -124,32 +135,9 @@ function App() {
   const fetchJavaFiles = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/all-java-code');
-      if (!response.ok) {
-        throw new Error('Error fetching Java files');
-      }
+      if (!response.ok) throw new Error('Error fetching Java files');
       const data = await response.json();
       setJavaCode(data);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  const fetchReports = async () => {
-    try {
-      const response = await fetch('http://localhost:5000/api/all-reports');
-      if (!response.ok) {
-        throw new Error('Error fetching reports');
-      }
-      const data = await response.json();
-      setReports(data);
-      if (data && Array.isArray(data) && data.length > 0) {
-            const reportHtml = data.map(report => report.content); // Extract _id from each report
-            const parsedReports = reportHtml.map(parseHTMLContent); // Convert HTML to structured JSON
-            console.log('Parsed Reports:', JSON.stringify(parsedReports, null, 2));  // The `null, 2` is for pretty-printing the JSON
-
-            setReportContent(parsedReports);
-//            console.log('All Report IDs:', reportHtml); // Log all _id values
-      }
     } catch (error) {
       setError(error.message);
     }
@@ -178,17 +166,11 @@ function App() {
         method: 'POST',
         body: formData,
       });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       await response.json();
       setUploadStatus('Upload successful!');
       alert('Java file uploaded successfully!');
-
-      const fileInput = document.getElementById('javaFileInput');
-      if (fileInput) fileInput.value = '';
+      document.getElementById('javaFileInput').value = '';
       setJavaFile(null);
       fetchJavaFiles();
     } catch (error) {
@@ -202,24 +184,9 @@ function App() {
   };
 
   useEffect(() => {
-    if (javaFile) {
-      uploadJavaFile();
-    }
-  }, [javaFile]);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (!testInProgress) {
-        fetchTestResults();
-      }
-    }, 300000);
-    return () => clearInterval(intervalId);
-  }, [testInProgress]);
-
-  useEffect(() => {
+    fetchReports();
     fetchTestResults();
     fetchJavaFiles();
-    fetchReports();
   }, []);
 
   return (
@@ -239,25 +206,21 @@ function App() {
             <li>
               <Link to="/results">Results</Link>
             </li>
+            <li>
+              <Link to="/statistics">Statistics</Link> {/* New Page Link */}
+            </li>
           </ul>
         </nav>
 
         <main className="main-content">
-          {error && (
-            <div className="error-message">
-              Error: {error}
-            </div>
-          )}
+          {error && <div className="error-message">Error: {error}</div>}
 
           {loading ? (
             <div className="loading">Loading...</div>
           ) : (
             <Routes>
               <Route path="/" element={<Navigate to="/analytics" />} />
-              <Route
-                path="/analytics"
-                element={<AnalyticsPage testResults={reportContent} />}
-              />
+              <Route path="/analytics" element={<AnalyticsPage testResults={reportContent} />} />
               <Route
                 path="/code"
                 element={
@@ -269,10 +232,8 @@ function App() {
                   />
                 }
               />
-              <Route
-                path="/results"
-                element={<ResultsPage testResults={testResults} reports={reports} />}
-              />
+              <Route path="/results" element={<ResultsPage testResults={testResults} reports={reports} />} />
+              <Route path="/statistics" element={<StatisticsPage testResults={reportContent} />} /> {/* New Route */}
             </Routes>
           )}
         </main>
