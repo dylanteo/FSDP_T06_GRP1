@@ -1,8 +1,14 @@
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.testng.annotations.*;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ContextConfiguration;
+import org.testng.annotations.AfterSuite;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.Test;
+import org.testng.annotations.Parameters;
 
+@SpringBootTest
 //@ContextConfiguration(classes = Login.class)
 public class Testng {
 
@@ -11,8 +17,6 @@ public class Testng {
     private TestCaseOutputRepository testCaseOutputRepository;
 
     SeleniumService seleniumService = new SeleniumService();
-
-
 
     Register register = new Register();
 
@@ -27,7 +31,7 @@ public class Testng {
         System.out.println("Spring Context Initialized");
     }
 
-    //    @Test
+//    @Test
 //    @Parameters("browser")
 //    public void test2(String browser) {
 //        // Initialize WebDriver first in SeleniumService
@@ -46,24 +50,24 @@ public class Testng {
 //        //seleniumService.tearDown();
 //    }
 //
+//    @Test
+//    @Parameters("browser")
+//    public void test5(String browser) {
+//        // Initialize WebDriver first in SeleniumService
+//        //seleniumService.setUp(browser); // Set up the WebDriver based on the browser parameter
+//        System.out.println("====================================================");
+//        System.out.println(oc.runOpenNewAccount("a", "a", "SAVINGS", "17118", browser));
+//        //seleniumService.tearDown();
+//    }
     @Test
     @Parameters("browser")
-    public void test5(String browser) {
-        // Initialize WebDriver first in SeleniumService
-        //seleniumService.setUp(browser); // Set up the WebDriver based on the browser parameter
-        System.out.println("====================================================");
-        System.out.println(oc.runOpenNewAccount("a", "a", "SAVINGS", "13899", browser));
-        //seleniumService.tearDown();
-    }
-    @Test
-    @Parameters("browser")
-    public void testloginbanksite(@Optional("chrome")String browser)
+    public void testloginbanksite(String browser)
     {
         System.out.println("====================================================");
         System.out.println(login.runLogin("test","test",browser));
         System.out.println("====================================================");
     }
-    //    @Test
+//    @Test
 //    @Parameters("browser")
 //    public void createAccount(String browser)
 //    {

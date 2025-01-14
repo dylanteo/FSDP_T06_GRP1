@@ -1,48 +1,108 @@
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
-
-@RestController // Use @RestController to directly return JSON responses
-@RequestMapping("/api") // Set a base URL path for all endpoints
-//@CrossOrigin(origins = "http://localhost:3001")
+@Controller
+@RestController
+@RequestMapping("/api")
 public class TestController {
 
+    @Autowired
+    private SeleniumService seleniumService;
 
+    @Autowired
+    private Login login;
 
-    @GetMapping("/hello")
-    public String hello() {
-        return "hello"; // This will look for hello.html in src/main/resources/templates
+    @Autowired
+    private Register register;
+
+    @Autowired
+    private OpenAccount openAccount;
+
+    @Autowired
+    private forgetLogin forgetLogin;
+
+    @Autowired
+    private admin admin;
+
+    @Autowired
+    private TestCaseOutputRepository testCaseOutputRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
+    private void saveAndBroadcastResult(TestCaseOutput testCaseOutput) {
+        testCaseOutputRepository.save(testCaseOutput);
+        messagingTemplate.convertAndSend("/topic/testResults", testCaseOutput);
     }
 
-    @GetMapping("/test")
-    public String greeting() {
-        return "test"; // This will look for greeting.html in src/main/resources/templates
+    @GetMapping("/getTestResults")
+    public List<TestCaseOutput> getTestResults() {
+        return testCaseOutputRepository.findAll();
     }
 
-    /*@GetMapping("/selenium")
-    public String runSeleniumTest(@RequestParam String username, @RequestParam String password) {
-        // Run the Selenium test with the provided username and password
-        return seleniumService.runTest(username);
-    }*/
+    @GetMapping("/testingForgotLoginInfo")
+    public String testForgotLoginInfo() {
+        String result = forgetLogin.runForgotLoginInfo("chrome");
+        saveTestResult("ForgotLoginInfoTest", result);
+        return result;
+    }
+
     @GetMapping("/testinglogin")
-    public String test(){
-        return Login.runLogin("test", "test", "chrome");
+    public String testLogin() {
+        String result = login.runLogin("B", "A", "firefox");
+        saveTestResult("LoginTest", result);
+        return result;
     }
 
     @GetMapping("/signup")
-    public String signup(){
-        return Register.runRegister("hi", "hi","hi","hi","hi","hi","hi","hi","h","hi", "chrome");
+    public String signup() {
+        String result = register.runRegister("hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "hi", "chrome");
+        saveTestResult("SignupTest", result);
+        return result;
     }
 
     @GetMapping("/openaccount")
-    public String openaccount(){
-        return OpenAccount.runOpenNewAccount("test","test", "SAVINGS", "14343", "chrome");
+    public String openaccount() {
+        String result = openAccount.runOpenNewAccount("test", "test", "SAVINGS", "14010", "chrome");
+        saveTestResult("OpenAccountTest", result);
+        return result;
     }
 
-    @GetMapping("/react")
-    public String sayHello() {
-        return "Hello from Java backend!";
+    @GetMapping("/managerLogin")
+    public String managerLogin() {
+        String result = admin.runBankManagerLogin("chrome");
+        saveTestResult("ManagerLoginTest", result);
+        return result;
+    }
+
+    @GetMapping("/addcustomer")
+    public String addCustomer() {
+        String result = admin.runAddCustomer("chrome", "yes", "yes", "yes");
+        saveTestResult("AddCustomerTest", result);
+        return result;
+    }
+
+    private void saveTestResult(String testCaseId, String result) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String startTime = LocalDateTime.now().format(formatter);
+        String endTime = LocalDateTime.now().format(formatter);
+        boolean success = result.contains("successfully");
+
+        TestCaseOutput testCaseOutput = new TestCaseOutput();
+        testCaseOutput.setTestCaseId(testCaseId);
+        testCaseOutput.setStartTime(startTime);
+        testCaseOutput.setEndTime(endTime);
+        testCaseOutput.setStatus(success ? "Success" : "Failure");
+        testCaseOutput.setTimeTaken(5000);
+        testCaseOutput.setErrorMessage(success ? "No Error" : result);
+
+        saveAndBroadcastResult(testCaseOutput);
     }
 }

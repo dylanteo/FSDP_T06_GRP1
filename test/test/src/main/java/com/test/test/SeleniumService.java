@@ -18,7 +18,6 @@ import org.testng.annotations.Parameters;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Duration;
-
 @Service
 public class SeleniumService {
 
@@ -33,17 +32,17 @@ public class SeleniumService {
         if ("chrome".equalsIgnoreCase(browser)) {
             WebDriverManager.chromedriver().setup();
             ChromeOptions options = new ChromeOptions();
-            options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
+            options.addArguments( "--no-sandbox", "--disable-dev-shm-usage");
             capabilities.setCapability(ChromeOptions.CAPABILITY, options);
         } else if ("firefox".equalsIgnoreCase(browser)) {
             WebDriverManager.firefoxdriver().driverVersion("0.35.0").setup();
             FirefoxOptions options = new FirefoxOptions();
-            options.addArguments("--headless");
+//            options.addArguments("--headless");
             capabilities.setCapability(FirefoxOptions.FIREFOX_OPTIONS, options);
         } else if ("edge".equalsIgnoreCase(browser)) {
             WebDriverManager.edgedriver().setup();
             EdgeOptions options = new EdgeOptions();
-            options.addArguments("--headless");
+//            options.addArguments("--headless");
             capabilities.setCapability(EdgeOptions.CAPABILITY, options);
         } else {
             throw new IllegalArgumentException("Unsupported browser: " + browser);

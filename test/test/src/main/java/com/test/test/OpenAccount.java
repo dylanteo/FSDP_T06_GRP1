@@ -12,11 +12,12 @@ import org.springframework.stereotype.Service;
 import org.testng.Assert;
 
 import java.time.Duration;
+import java.util.List;
 
 @Service
 public class OpenAccount {
-    private static SeleniumService seleniumService = new SeleniumService();
-    private static Login loginHelper = new Login(seleniumService); // Inject Login helper to handle login
+    private final SeleniumService seleniumService;
+    private final Login loginHelper; // Inject Login helper to handle login
 
     @Autowired
     public OpenAccount(SeleniumService seleniumService, Login loginHelper) {
@@ -24,9 +25,9 @@ public class OpenAccount {
         this.loginHelper = loginHelper;
     }
 
-    public static String runOpenNewAccount(String username, String password, String accountType, String accountNumber, String browser) {
-        seleniumService.setUp(browser);
-        WebDriver driver = seleniumService.getDriver(); // Get the driver from SeleniumService
+    public String runOpenNewAccount(String username, String password, String accountType, String accountNumber, String Browser) {
+        seleniumService.setUp(Browser);
+        WebDriver driver = seleniumService.getDriver();
 
         String result;
 
@@ -46,7 +47,7 @@ public class OpenAccount {
         return result; // Return the result after cleanup
     }
 
-    private static void openNewAccount(WebDriver driver, String username, String password, String accountType, String accountNumber) {
+    private void openNewAccount(WebDriver driver, String username, String password, String accountType, String accountNumber) {
         System.out.println("Logging in...");
         loginHelper.login(driver, username, password); // Use injected loginHelper to log in
 
@@ -64,8 +65,9 @@ public class OpenAccount {
 
         // Select "From Account"
         WebElement fromAccountDropdown = wait.until(ExpectedConditions.visibilityOfElementLocated(By.id("fromAccountId")));
+        wait.until(ExpectedConditions.numberOfElementsToBeMoreThan(By.xpath("//select[@id='fromAccountId']/option"), 0));
         Select fromAccountSelect = new Select(fromAccountDropdown);
-        fromAccountSelect.selectByVisibleText(accountNumber);
+        fromAccountSelect.selectByValue(accountNumber);
 
         // Click "Open New Account" button
         WebElement createButton = wait.until(ExpectedConditions.elementToBeClickable(By.xpath("//input[@type='button' and @value='Open New Account']")));

@@ -14,17 +14,16 @@ import java.time.Duration;
 
 @Service
 public class Register {
-    private static SeleniumService seleniumService = new SeleniumService();
-
+    private SeleniumService seleniumService;
 
     @Autowired
-    public Register(SeleniumService seleniumService) {
-        this.seleniumService = seleniumService;
+    public Register() {
+        this.seleniumService = new SeleniumService();
     }
 
 
 
-    public static String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password, String browser) {
+    public String runRegister(String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password,String browser) {
         seleniumService.setUp(browser);
         WebDriver driver = seleniumService.getDriver();
         String result;
@@ -45,7 +44,7 @@ public class Register {
         return result; // Return the result after cleanup
     }
 
-    public static void register(WebDriver driver, String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
+    public void register(WebDriver driver, String firstName, String lastName, String address, String city, String state, String zipCode, String phone, String ssn, String username, String password) {
         driver.get("https://parabank.parasoft.com/parabank/index.htm");
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(5));
 

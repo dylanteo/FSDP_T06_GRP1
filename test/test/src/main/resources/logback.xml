@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%date %level [%thread] %logger{10} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- File appender to log in XML format -->
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>target/test-output/test_log.xml</file>
+        <encoder>
+            <pattern>
+                <log>
+                    <date>%date</date>
+                    <level>%level</level>
+                    <logger>%logger</logger>
+                    <message>%msg</message>
+                </log>
+            </pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root logger configuration -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>
