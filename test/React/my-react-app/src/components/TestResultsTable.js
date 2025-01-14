@@ -1,3 +1,4 @@
+// TestResultsTable.js
 import React, { useState } from 'react';
 
 const TestResultsTable = ({ testResults }) => {
