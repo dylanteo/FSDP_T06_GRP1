@@ -8,8 +8,7 @@ const CsvUploader = ({ setTestCases }) => {
       Papa.parse(file, {
         header: true,
         complete: (results) => {
-          console.log(results.data); // Log the parsed data
-          setTestCases(results.data); // Update the test cases state
+          setTestCases(results.data);
         },
         error: (error) => {
           console.error('Error parsing CSV:', error);
@@ -19,7 +18,7 @@ const CsvUploader = ({ setTestCases }) => {
   };
 
   return (
-    <div>
+    <div className="csv-uploader">
       <input type="file" accept=".csv" onChange={handleFileChange} />
     </div>
   );
