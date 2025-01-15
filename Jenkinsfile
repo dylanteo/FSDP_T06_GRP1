@@ -4,7 +4,7 @@ pipeline {
     environment {
         // Define the directory where the app is located
         APP_DIR = 'test/React/my-react-app'
-        SELENIUM_SERVER_JAR = 'path/to/selenium-server-4.26.0.jar' // Update this path
+        SELENIUM_SERVER_JAR = 'test/test/selenium-server-4.26.0.jar' // Update this path
     }
 
     stages {
