@@ -48,7 +48,7 @@ const CodePage = ({ javaCode, handleJavaFileChange, handleUploadButtonClick, upl
 const ResultsPage = ({ testResults, reports }) => (
   <div className="page-container">
     <h2>Test Results</h2>
-    <TestResultsTable testResults={testResults} />
+    {/*<TestResultsTable testResults={testResults} />*/}
     <ReportTable reports={reports} />
   </div>
 );
