@@ -60,6 +60,14 @@ const CodeTable = ({ javaCode }) => {
         { type: 'text/x-java' });
       formData.append('file', blob, filename);
 
+      // Add email to form data
+      const userEmail = localStorage.getItem('userEmail') || prompt('Please enter your email address:');
+      if (!userEmail) {
+        throw new Error('Email is required');
+      }
+      localStorage.setItem('userEmail', userEmail); // Save for future use
+      formData.append('email', userEmail);
+
       const response = await fetch('http://localhost:5000/api/upload', {
         method: 'POST',
         body: formData,
