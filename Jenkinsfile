@@ -5,6 +5,10 @@ pipeline {
         // Define the directory where the app is located
         APP_DIR = 'test/React/my-react-app'
         SELENIUM_SERVER_JAR = 'test/test/selenium-server-4.26.0.jar' // Update this path
+        SELENIUM_GRID_URL = 'http://localhost:4444/wd/hub'  // URL to access the Selenium Grid
+        BROWSER_CHROME = 'chrome'
+        BROWSER_FIREFOX = 'firefox'
+        BROWSER_EDGE = 'MicrosoftEdge'
     }
 
     stages {
@@ -45,20 +49,56 @@ pipeline {
                 }
             }
         }
+
+        stage('Run Tests on Chrome') {
+            steps {
+                script {
+                    // Run your tests on Chrome using Selenium WebDriver
+                    echo "Running tests on Chrome"
+                    bat """
+                    mvn clean test -Dbrowser=${BROWSER_CHROME} -Dselenium.url=${SELENIUM_GRID_URL}
+                    """
+                }
+            }
+        }
+
+        stage('Run Tests on Firefox') {
+            steps {
+                script {
+                    // Run your tests on Firefox using Selenium WebDriver
+                    echo "Running tests on Firefox"
+                    bat """
+                    mvn clean test -Dbrowser=${BROWSER_FIREFOX} -Dselenium.url=${SELENIUM_GRID_URL}
+                    """
+                }
+            }
+        }
+
+        stage('Run Tests on Edge') {
+            steps {
+                script {
+                    // Run your tests on Edge using Selenium WebDriver
+                    echo "Running tests on Microsoft Edge"
+                    bat """
+                    mvn clean test -Dbrowser=${BROWSER_EDGE} -Dselenium.url=${SELENIUM_GRID_URL}
+                    """
+                }
+            }
+        }
     }
 
     post {
         success {
-            echo 'Development server and Selenium server started successfully.'
+            echo 'Development server, Selenium server, and tests executed successfully.'
         }
         failure {
-            echo 'Failed to start the servers.'
+            echo 'Failed to start the servers or run tests.'
         }
         always {
             script {
                 // Cleanup to ensure processes are terminated
                 bat 'taskkill /F /IM node.exe'    // Stop the React development server
-                bat 'taskkill /F /IM java.exe'   // Stop the Selenium server
+                bat 'taskkill /F /IM java.exe'    // Stop the Selenium server
             }
         }
     }
