@@ -220,7 +220,7 @@ function App() {
           </div>
           <ul>
             <li>
-              <Link to="/analytics">Analytics</Link>
+              <Link to="/analytics">Home</Link>
             </li>
             <li>
               <Link to="/code">Code</Link>
