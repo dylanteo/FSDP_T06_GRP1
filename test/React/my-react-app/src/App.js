@@ -115,6 +115,7 @@ function parseHTMLContent(htmlContent) {
 function App() {
   const [reports, setReports] = useState([]);
   const [reportContent, setReportContent] = useState([]);
+  const [JSONContent, setJSONContent] = useState([]);
   const [testResults, setTestResults] = useState([]);
   const [javaCode, setJavaCode] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +135,18 @@ function App() {
     } catch (error) {
       setError(error.message);
     }
+  };
+
+  const fetchJSONReports = async () => {
+  try{
+  const response = await fetch('http://localhost:5000/api/json-reports');
+  const data = await response.json();
+  //console.log(JSON.stringify(data, null, 2));
+  setJSONContent(data);
+    }  catch (error) {
+     setError(error.message);
+
+  }
   };
 
   const fetchTestResults = async () => {
@@ -209,7 +222,11 @@ function App() {
     fetchReports();
     fetchTestResults();
     fetchJavaFiles();
+    fetchJSONReports();
   }, []);
+  useEffect(() => {
+    console.log("Fetched JSON Reports:", JSONContent);
+  }, [JSONContent]);
 
   return (
     <Router>
@@ -242,7 +259,7 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={<Navigate to="/analytics" />} />
-              <Route path="/analytics" element={<AnalyticsPage testResults={reportContent} />} />
+              <Route path="/analytics" element={<AnalyticsPage testResults={JSONContent} />} />
               <Route
                 path="/code"
                 element={

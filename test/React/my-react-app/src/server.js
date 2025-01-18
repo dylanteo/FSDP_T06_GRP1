@@ -155,6 +155,27 @@ const upload = multer({
   }
 });
 
+async function readJSONReport(repoRoot) {
+  return new Promise((resolve, reject) => {
+    // Update the path to match your directory structure - removed extra 'test' directory
+    const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
+    console.log('reportPath', reportPath);
+    fs.readFile(reportPath, 'utf8', (err, data) => {
+      if (err) {
+        console.error(`Failed to read JSON report at path: ${reportPath}`);
+        reject(new Error(`Failed to read JSON report: ${err.message}`));
+        return;
+      }
+
+      try {
+        const jsonContent = JSON.parse(data);
+        resolve(jsonContent);
+      } catch (error) {
+        reject(new Error('Invalid JSON format in test results file'));
+      }
+    });
+  });
+}
 async function sendReportEmail(recipientEmail, reportContent, filename) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -188,7 +209,6 @@ async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
   return new Promise((resolve, reject) => {
     const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
     const projectDir = path.join(__dirname, '..', '..', '..', 'test');
-
     exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
         return reject(new Error(`Compilation failed: ${compileStderr}`));
@@ -240,6 +260,16 @@ async function saveJavaFileToDB(file, fileContent) {
   return javaFilesCollection.insertOne(javaFileDocument);
 }
 
+async function saveJSONReportToDB(reportContent) {
+  const reportsCollection = db.collection('JSONREPORTS');
+  const currentDate = new Date();
+  const reportDocument = {
+    date: currentDate.toISOString().split('T')[0],
+    content: reportContent,
+  };
+  return reportsCollection.insertOne(reportDocument);
+}
+
 //saves the report file to the database
 async function saveTestReportToDB(reportContent, javaFile) {
   const reportsCollection = db.collection('testReports');
@@ -258,47 +288,65 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
 
-  const recipientEmail = req.body.email; // Add this field to your form data
+  const recipientEmail = req.body.email;
   if (!recipientEmail) {
     return res.status(400).json({ error: 'Email address is required.' });
   }
 
   const uploadedFilePath = path.join(uploadDir, req.file.filename);
   const testClassName = req.file.filename.replace('.java', '');
-  let result;
-
+  const repoRoot = path.join(__dirname, '..', '..', '..', '..');
+  console.log('repoRoot',repoRoot);
   try {
     // Step 1: Compile and run the Java file with Maven
     console.log('Compiling and running test with Maven...');
-    result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+    const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
 
-    // Step 2: If compilation is successful, save the Java file to the database
-    const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
+    // Step 2: Read JSON report with correct path
+    const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
 
-    // Step 3: If report exists, save the report to the database and send email
-    if (fs.existsSync(result.reportPath)) {
-      const reportContent = fs.readFileSync(result.reportPath, 'utf8');
-      await saveTestReportToDB(reportContent, req.file.originalname);
-
-      // Send email with report
-      await sendReportEmail(recipientEmail, reportContent, req.file.originalname);
+    // Add check to ensure directory exists
+    const reportDir = path.dirname(reportPath);
+    if (!fs.existsSync(reportDir)) {
+      fs.mkdirSync(reportDir, { recursive: true });
+    }
+    console.log('dir',__dirname);
+    console.log('Report path:',reportPath);
+    // Wait for file to be created (add timeout)
+    let attempts = 0;
+    const maxAttempts = 20;
+    while (!fs.existsSync(reportPath) && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      attempts++;
     }
 
-    // Step 4: Clean up the uploaded file
+    if (!fs.existsSync(reportPath)) {
+      throw new Error(`Report file not found after ${maxAttempts} seconds`);
+    }
+
+    const reportContent = fs.readFileSync(reportPath, 'utf8');
+
+    // Rest of the steps...
+    await saveJSONReportToDB(reportContent);
+    await sendReportEmail(recipientEmail, reportContent, req.file.originalname);
+
+    // Clean up
     fs.unlinkSync(uploadedFilePath);
 
-    // Respond with success
     res.json({
       success: true,
-      message: 'Java file processed, report saved, and email sent.',
+      message: 'Java file processed, JSON report saved, and email sent.'
     });
+
   } catch (err) {
     console.error('Error processing file:', err);
-    // If there is an error during any of the steps, clean up the uploaded file
     if (fs.existsSync(uploadedFilePath)) {
       fs.unlinkSync(uploadedFilePath);
     }
-    res.status(500).json({ error: 'Error processing file.', details: err.message });
+    res.status(500).json({
+      error: 'Error processing file.',
+      details: err.message
+    });
   }
 });
 
@@ -400,6 +448,27 @@ app.get('/api/all-reports', async (req, res) => {
     res.json(reports);
   } catch (err) {
     console.error('Error fetching reports:', err);
+    res.status(500).json({
+      error: 'Error fetching reports.',
+      details: err.message
+    });
+  }
+});
+
+app.get('/api/json-reports', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+
+  try {
+    const reportsCollection = db.collection('JSONREPORTS');
+    const reports = await reportsCollection.find()
+      .sort({ date: -1 })
+      .toArray();
+
+    res.json(reports);
+  } catch (err) {
+    console.error('Error fetching JSON reports:', err);
     res.status(500).json({
       error: 'Error fetching reports.',
       details: err.message
