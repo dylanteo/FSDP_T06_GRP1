@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: selenium-hub
+  labels:
+    app: selenium-hub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: selenium-hub
+  template:
+    metadata:
+      labels:
+        app: selenium-hub
+    spec:
+      containers:
+        - name: selenium-hub
+          image: selenium/hub:latest
+          ports:
+            - containerPort: 4442
+            - containerPort: 4443
+            - containerPort: 4444
+          env:
+            - name: SE_GRID_MAX_SESSION
+              value: "10" # Maximum number of sessions across all nodes
+            - name: SE_GRID_MAX_CONCURRENT_SESSIONS
+              value: "10" # Maximum number of concurrent sessions
