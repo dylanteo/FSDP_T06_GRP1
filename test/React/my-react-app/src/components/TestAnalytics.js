@@ -1,152 +1,355 @@
+//import React, { useState } from 'react';
+//import { Activity, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+//
+//const parseContent = (contentString) => {
+//  try {
+//    if (typeof contentString === 'string') {
+//      console.log('contentString',contentString);
+//      const cleanedString = contentString.replace(/\\r\\n/g, '')
+//                                       .replace(/\\r/g, '')
+//                                       .replace(/\\n/g, '')
+//                                       .replace(/\s+/g, ' ')
+//                                       .trim();
+//      return JSON.parse(cleanedString);
+//    }
+//    return contentString;
+//  } catch (e) {
+//    console.error('Error parsing content:', e);
+//    return [];
+//  }
+//};
+//
+//const calculateStats = (testData) => ({
+//  total: testData.length,
+//  passed: testData.filter((test) => test.status === 'pass').length,
+//  failed: testData.filter((test) => test.status === 'fail').length,
+//  notExecuted: testData.filter(
+//    (test) => !test.status || test.status === 'not_executed'
+//  ).length,
+//});
+//
+//const filterByDate = (testResults, period) => {
+//  const now = new Date();
+//  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+//  const startOfWeek = new Date(startOfToday);
+//  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay()); // Start of week (Sunday)
+//  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1); // Start of month
+//  const startOfQuarter = new Date(
+//    now.getFullYear(),
+//    Math.floor(now.getMonth() / 3) * 3,
+//    1
+//  ); // Start of quarter
+//
+//  let filteredResults;
+//  if (period === 'Last Test') {
+//    filteredResults = [...testResults].sort((a, b) => new Date(a.date) - new Date(b.date));
+//  } else {
+//    let startDate;
+//    switch (period) {
+//      case 'Today':
+//        startDate = startOfToday;
+//        break;
+//      case 'This Week':
+//        startDate = startOfWeek;
+//        break;
+//      case 'This Month':
+//        startDate = startOfMonth;
+//        break;
+//      case 'This Quarter':
+//        startDate = startOfQuarter;
+//        break;
+//      default:
+//        startDate = new Date(0); // Include all dates
+//    }
+//
+//    filteredResults = testResults.filter((result) => {
+//      const resultDate = new Date(result.date);
+//      return resultDate >= startDate;
+//    });
+//  }
+//
+//  return filteredResults;
+//};
+//
+//const Dashboard = ({ testResults }) => {
+//  const [selectedPeriod, setSelectedPeriod] = useState('Today');
+//
+//  const filteredResults = filterByDate(testResults, selectedPeriod);
+//  const content = filteredResults.map((item) => parseContent(item.content || '[]'));
+//  //console.log(content);
+//  const stats = content.map((contentItem) => calculateStats(contentItem));
+//  const totalStats = stats.reduce(
+//    (acc, curr) => {
+//      acc.total += curr.total;
+//      acc.passed += curr.passed;
+//      acc.failed += curr.failed;
+//      acc.notExecuted += curr.notExecuted;
+//      return acc;
+//    },
+//    { total: 0, passed: 0, failed: 0, notExecuted: 0 }
+//  );
+//
+//  return (
+//    <div className="dashboard">
+//      <div className="section-header">
+//        <h1 className="title">Latest Runs</h1>
+//
+//        {/* Time Period Tabs */}
+//        <div className="tabs">
+//          {['Last Test','Today', 'This Week', 'This Month', 'This Quarter'].map((period) => (
+//            <button
+//              key={period}
+//              className={`tab ${selectedPeriod === period ? 'active' : ''}`}
+//              onClick={() => setSelectedPeriod(period)}
+//            >
+//              {period}
+//            </button>
+//          ))}
+//        </div>
+//      </div>
+//
+//      {/* Stats Grid */}
+//      <div className="stats-grid">
+//        <div className="stat-card">
+//          <div className="stat-content">
+//            <div>
+//              <div className="stat-number">{totalStats.total}</div>
+//              <div className="stat-label">Total</div>
+//            </div>
+//            <Activity className="icon blue" />
+//          </div>
+//        </div>
+//
+//        <div className="stat-card">
+//          <div className="stat-content">
+//            <div>
+//              <div className="stat-number">{totalStats.passed}</div>
+//              <div className="stat-label">Passed</div>
+//            </div>
+//            <CheckCircle className="icon green" />
+//          </div>
+//        </div>
+//
+//        <div className="stat-card">
+//          <div className="stat-content">
+//            <div>
+//              <div className="stat-number">{totalStats.failed}</div>
+//              <div className="stat-label">Failed</div>
+//            </div>
+//            <XCircle className="icon red" />
+//          </div>
+//        </div>
+//
+//        <div className="stat-card">
+//          <div className="stat-content">
+//            <div>
+//              <div className="stat-number">{totalStats.notExecuted}</div>
+//              <div className="stat-label">Not Executed</div>
+//            </div>
+//            <AlertCircle className="icon gray" />
+//          </div>
+//        </div>
+//      </div>
+//        <div className="review-grid">
+//                {/* Submitted for review */}
+//                <div className="review-card">
+//                  <h2 className="review-title">Submitted for review</h2>
+//                  <div className="tabs">
+//                    <button className="tab active">Test Cases</button>
+//                    <button className="tab">Elements</button>
+//                  </div>
+//                  <div className="empty-state">
+//                    You have not submitted any Test Cases for review
+//                  </div>
+//                </div>
+//                </div>
+//    </div>
+//  );
+//};
+//
+//export default Dashboard;
 import React, { useState } from 'react';
-import { Chart as ChartJS, ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
+import { Activity, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-ChartJS.register(ArcElement, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
-
-const TestAnalytics = ({ testResults }) => {
-  const [selectedTestType, setSelectedTestType] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('');
-
-const handleFilter = (tests) => {
-  return tests.filter((test) => {
-    const matchesTestType = selectedTestType ? test.name === selectedTestType : true;
-    const testMonth = new Date(test.timestamp).getMonth() + 1; // getMonth() is 0-indexed (0 = January)
-    const matchesMonth = selectedMonth ? testMonth === parseInt(selectedMonth, 10) : true;
-    return matchesTestType && matchesMonth;
-  });
+const parseContent = (contentString) => {
+  try {
+  console.log(contentString);
+    if (typeof contentString === 'string') {
+      const cleanedString = contentString.replace(/\\r\\n/g, '')
+                                       .replace(/\\r/g, '')
+                                       .replace(/\\n/g, '')
+                                       .replace(/\s+/g, ' ')
+                                       .trim();
+      return JSON.parse(cleanedString);
+    }
+    return contentString;
+  } catch (e) {
+    console.error('Error parsing content:', e);
+    return [];
+  }
 };
 
-  const processReportData = () => {
-    if (!testResults || !testResults.length || !testResults[0].tests) return null;
+const calculateStats = (tests) => {
+  if (!Array.isArray(tests)) {
+    tests = [tests]; // Convert single test to array
+  }
 
-    const allTests = handleFilter(testResults.flatMap(report => report.tests || []));
-    const totalTests = allTests.length;
-    const failedTests = allTests.filter(test => test.status === 'fail').length;
-    const passedTests = allTests.filter(test => test.status === 'pass').length;
-
-    const totalDuration = allTests.reduce((total, test) => {
-      const [hours, minutes, seconds, ms] = test.duration.split(':').map(str => parseInt(str));
-      const durationInMs = (hours * 3600000) + (minutes * 60000) + (seconds * 1000) + ms;
-      return total + durationInMs;
-    }, 0);
-
-    const errorTypes = allTests.reduce((acc, test) => {
-      const failEvents = test.events.filter(event => event.status === 'Fail');
-      failEvents.forEach(event => {
-        const errorMessage = event.details;
-        acc[errorMessage] = (acc[errorMessage] || 0) + 1;
-      });
-      return acc;
-    }, {});
-
-    const averageDuration = totalTests > 0 ? totalDuration / totalTests : 0;
-    const passRate = totalTests > 0 ? (passedTests / totalTests) * 100 : 0;
-    const failRate = totalTests > 0 ? (failedTests / totalTests) * 100 : 0;
-
-    return {
-      totalTests,
-      failedTests,
-      passedTests,
-      totalDuration,
-      averageDuration,
-      passRate,
-      failRate,
-      errorTypes,
-    };
+  return {
+    total: tests.length,
+    passed: tests.filter((test) => test.status === 'pass').length,
+    failed: tests.filter((test) => test.status === 'fail').length,
+    notExecuted: tests.filter(
+      (test) => !test.status || test.status === 'not_executed'
+    ).length,
   };
+};
 
-  const metrics = processReportData() || {
-    totalTests: 0,
-    failedTests: 0,
-    passedTests: 0,
-    totalDuration: 0,
-    averageDuration: 0,
-    passRate: 0,
-    failRate: 0,
-    errorTypes: {}
-  };
+const filterByDate = (testResults, period) => {
+  if (!testResults || !testResults.length) return [];
 
-  // Pie chart data
-  const pieChartData = {
-    labels: ['Failed', 'Passed'],
-    datasets: [
-      {
-        data: [metrics.failedTests, metrics.passedTests],
-        backgroundColor: ['#ef4444', '#4ade80'],
-        borderColor: ['#dc2626', '#22c55e'],
-        borderWidth: 1,
-      },
-    ],
-  };
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const startOfQuarter = new Date(
+    now.getFullYear(),
+    Math.floor(now.getMonth() / 3) * 3,
+    1
+  );
 
-  const testTypes = Array.from(new Set(testResults.flatMap(report => report.tests.map(test => test.name))));
-  const months = Array.from(new Set(testResults.flatMap(report => report.tests.map(test => new Date(test.timestamp).getMonth() + 1))));
+  let filteredResults;
+  if (period === 'Last Test') {
+    // Sort by startTime in descending order and take the first result
+    filteredResults = [...testResults].sort((a, b) => {
+      const aContent = parseContent(a.content);
+      const bContent = parseContent(b.content);
+      return new Date(bContent[0]?.startTime) - new Date(aContent[0]?.startTime);
+    }).slice(0, 1);
+  } else {
+    let startDate;
+    switch (period) {
+      case 'Today':
+        startDate = startOfToday;
+        break;
+      case 'This Week':
+        startDate = startOfWeek;
+        break;
+      case 'This Month':
+        startDate = startOfMonth;
+        break;
+      case 'This Quarter':
+        startDate = startOfQuarter;
+        break;
+      default:
+        return testResults;
+    }
+
+    filteredResults = testResults.filter((result) => {
+      const content = parseContent(result.content);
+      const testDate = new Date(content[0]?.date);
+      return testDate >= startDate;
+    });
+  }
+
+  return filteredResults;
+};
+
+const Dashboard = ({ testResults }) => {
+  const [selectedPeriod, setSelectedPeriod] = useState('Today');
+
+  // Filter and process results
+  const filteredResults = filterByDate(testResults, selectedPeriod);
+  const content = filteredResults.map((item) => parseContent(item.content));
+
+  // Calculate total stats from all filtered results
+  const totalStats = content.reduce(
+    (acc, curr) => {
+      const stats = calculateStats(curr);
+      return {
+        total: acc.total + stats.total,
+        passed: acc.passed + stats.passed,
+        failed: acc.failed + stats.failed,
+        notExecuted: acc.notExecuted + stats.notExecuted
+      };
+    },
+    { total: 0, passed: 0, failed: 0, notExecuted: 0 }
+  );
 
   return (
-    <div className="test-analytics">
-      <div className="analytics-header">
-        <h2>Test Report Analytics</h2>
+    <div className="dashboard">
+      <div className="section-header">
+        <h1 className="title">Latest Runs</h1>
 
-        <div className="filters">
-          <select value={selectedTestType} onChange={(e) => setSelectedTestType(e.target.value)}>
-            <option value="">All Test Types</option>
-            {testTypes.map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-
-          <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)}>
-            <option value="">All Months</option>
-            {months.map(month => (
-              <option key={month} value={month}>{`Month ${month}`}</option>
-            ))}
-          </select>
+        <div className="tabs">
+          {['Last Test', 'Today', 'This Week', 'This Month', 'This Quarter'].map((period) => (
+            <button
+              key={period}
+              className={`tab ${selectedPeriod === period ? 'active' : ''}`}
+              onClick={() => setSelectedPeriod(period)}
+            >
+              {period}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className="charts-container">
-        <div className="chart-wrapper pie-chart">
-          <h3>Pass/Fail Distribution</h3>
-          <Pie data={pieChartData} />
-        </div>
-
-        <div className="chart-wrapper time-card">
-          <h3>Test Results Summary</h3>
-          <div className="card-content">
-            <h4>Total Tests: {metrics.totalTests}</h4>
-            <h4>Failed: {metrics.failedTests}</h4>
-            <h4>Passed: {metrics.passedTests}</h4>
-          </div>
-        </div>
-
-        <div className="chart-wrapper time-card">
-          <h3>Success Rates</h3>
-          <div className="card-content">
-            <h4>Fail Rate: {metrics.failRate.toFixed(2)}%</h4>
-            <h4>Pass Rate: {metrics.passRate.toFixed(2)}%</h4>
-          </div>
-        </div>
-
-        <div className="chart-wrapper time-card">
-          <h3>Timing Analysis</h3>
-          <div className="card-content">
-            <h4>Average Duration: {(metrics.averageDuration / 1000).toFixed(2)} seconds</h4>
-            <h4>Total Duration: {(metrics.totalDuration / 1000).toFixed(2)} seconds</h4>
-          </div>
-        </div>
-
-        {Object.entries(metrics.errorTypes).map(([error, count]) => (
-          <div className="chart-wrapper time-card" key={error}>
-            <h3>{error}</h3>
-            <div className="card-content">
-              <h4>{count} occurrences</h4>
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-content">
+            <div>
+              <div className="stat-number">{totalStats.total}</div>
+              <div className="stat-label">Total</div>
             </div>
+            <Activity className="icon blue" />
           </div>
-        ))}
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-content">
+            <div>
+              <div className="stat-number">{totalStats.passed}</div>
+              <div className="stat-label">Passed</div>
+            </div>
+            <CheckCircle className="icon green" />
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-content">
+            <div>
+              <div className="stat-number">{totalStats.failed}</div>
+              <div className="stat-label">Failed</div>
+            </div>
+            <XCircle className="icon red" />
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-content">
+            <div>
+              <div className="stat-number">{totalStats.notExecuted}</div>
+              <div className="stat-label">Not Executed</div>
+            </div>
+            <AlertCircle className="icon gray" />
+          </div>
+        </div>
+      </div>
+
+      <div className="review-grid">
+        <div className="review-card">
+          <h2 className="review-title">Submitted for review</h2>
+          <div className="tabs">
+            <button className="tab active">Test Cases</button>
+            <button className="tab">Elements</button>
+          </div>
+          <div className="empty-state">
+            You have not submitted any Test Cases for review
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default TestAnalytics;
+export default Dashboard;

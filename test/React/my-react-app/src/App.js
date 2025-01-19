@@ -1,11 +1,10 @@
-// App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import TestResultsTable from './components/TestResultsTable';
 import CodeTable from './components/CodeTable';
 import ReportTable from './components/ReportTable';
 import TestAnalytics from './components/TestAnalytics';
-import TestCaseStatistics from './components/TestCaseStatistics';  // New Import
+import TestCaseStatistics from './components/TestCaseStatistics';
 import './css/App.css';
 
 // Analytics Page Component
@@ -49,12 +48,12 @@ const CodePage = ({ javaCode, handleJavaFileChange, handleUploadButtonClick, upl
 const ResultsPage = ({ testResults, reports }) => (
   <div className="page-container">
     <h2>Test Results</h2>
-    <TestResultsTable testResults={testResults} />
+    {/*<TestResultsTable testResults={testResults} />*/}
     <ReportTable reports={reports} />
   </div>
 );
 
-// **Statistics Page Component**
+// Statistics Page Component
 const StatisticsPage = ({ testResults }) => (
   <div className="page-container">
     <h2>Test Case Statistics Dashboard</h2>
@@ -95,7 +94,6 @@ function parseHTMLContent(htmlContent) {
     });
 
     testData.events = events;
-
     testItems.push(testData);
   });
 
@@ -107,21 +105,21 @@ function parseHTMLContent(htmlContent) {
   dateElements.forEach(element => {
     const content = element.textContent.trim();
     if (dateRegex.test(content)) {
-      date = content;  // If the content matches the date format, use it
+      date = content;
     }
   });
 
-  return { tests: testItems, date: date }; // Include the date if found
+  return { tests: testItems, date: date };
 }
 
 function App() {
   const [reports, setReports] = useState([]);
   const [reportContent, setReportContent] = useState([]);
+  const [JSONContent, setJSONContent] = useState([]);
   const [testResults, setTestResults] = useState([]);
   const [javaCode, setJavaCode] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [javaFile, setJavaFile] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
 
   // Fetch test reports from the backend
@@ -134,10 +132,21 @@ function App() {
       const parsedReports = reportHtml.map(parseHTMLContent);
       setReportContent(parsedReports);
       setReports(data);
-      //console.log(JSON.stringify(parsedReports, null, 2));
     } catch (error) {
       setError(error.message);
     }
+  };
+
+  const fetchJSONReports = async () => {
+  try{
+  const response = await fetch('http://localhost:5000/api/json-reports');
+  const data = await response.json();
+  //console.log(JSON.stringify(data, null, 2));
+  setJSONContent(data);
+    }  catch (error) {
+     setError(error.message);
+
+  }
   };
 
   const fetchTestResults = async () => {
@@ -165,39 +174,43 @@ function App() {
     }
   };
 
-  const handleJavaFileChange = (e) => {
+  const handleJavaFileChange = async (e) => {
     const file = e.target.files[0];
     if (file && file.name.endsWith('.java')) {
-      setJavaFile(file);
-      setUploadStatus('Preparing upload...');
+      console.log("File selected:", file.name);
+
+      // Create FormData and upload directly
+      const formData = new FormData();
+      formData.append('file', file);
+
+      setUploadStatus('Uploading...');
+
+      try {
+        const response = await fetch('http://localhost:5000/api/upload-code', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log("Upload response:", result);
+
+        setUploadStatus('Upload successful!');
+        alert('Java file uploaded successfully!');
+        document.getElementById('javaFileInput').value = '';
+        fetchJavaFiles();
+      } catch (error) {
+        console.error("Upload error:", error);
+        setUploadStatus(`Error uploading file: ${error.message}`);
+        alert(`Error uploading file: ${error.message}`);
+      }
     } else {
       alert('Please upload a valid Java file (.java)');
       setUploadStatus(null);
-    }
-  };
-
-  const uploadJavaFile = async () => {
-    if (!javaFile) return;
-
-    const formData = new FormData();
-    formData.append('file', javaFile);
-
-    try {
-      setUploadStatus('Uploading...');
-      const response = await fetch('http://localhost:5000/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      await response.json();
-      setUploadStatus('Upload successful!');
-      alert('Java file uploaded successfully!');
-      document.getElementById('javaFileInput').value = '';
-      setJavaFile(null);
-      fetchJavaFiles();
-    } catch (error) {
-      setUploadStatus(`Error uploading file: ${error.message}`);
-      alert(`Error uploading file: ${error.message}`);
     }
   };
 
@@ -209,7 +222,11 @@ function App() {
     fetchReports();
     fetchTestResults();
     fetchJavaFiles();
+    fetchJSONReports();
   }, []);
+  useEffect(() => {
+    console.log("Fetched JSON Reports:", JSONContent);
+  }, [JSONContent]);
 
   return (
     <Router>
@@ -220,7 +237,7 @@ function App() {
           </div>
           <ul>
             <li>
-              <Link to="/analytics">Analytics</Link>
+              <Link to="/analytics">Home</Link>
             </li>
             <li>
               <Link to="/code">Code</Link>
@@ -229,7 +246,7 @@ function App() {
               <Link to="/results">Results</Link>
             </li>
             <li>
-              <Link to="/statistics">Statistics</Link> {/* New Page Link */}
+              <Link to="/statistics">Statistics</Link>
             </li>
           </ul>
         </nav>
@@ -242,7 +259,7 @@ function App() {
           ) : (
             <Routes>
               <Route path="/" element={<Navigate to="/analytics" />} />
-              <Route path="/analytics" element={<AnalyticsPage testResults={reportContent} />} />
+              <Route path="/analytics" element={<AnalyticsPage testResults={JSONContent} />} />
               <Route
                 path="/code"
                 element={
@@ -255,7 +272,7 @@ function App() {
                 }
               />
               <Route path="/results" element={<ResultsPage testResults={testResults} reports={reports} />} />
-              <Route path="/statistics" element={<StatisticsPage testResults={reportContent} />} /> {/* New Route */}
+              <Route path="/statistics" element={<StatisticsPage testResults={reportContent} />} />
             </Routes>
           )}
         </main>
@@ -264,4 +281,6 @@ function App() {
   );
 }
 
+
 export default App;
+

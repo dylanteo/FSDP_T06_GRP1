@@ -7,9 +7,32 @@ const fs = require('fs');
 const cors = require('cors');
 const { exec } = require('child_process');
 const { MongoClient } = require('mongodb');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const app = express();
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,  // use SSL
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+  tls: {
+        rejectUnauthorized: false
+      }
+});
+
+transporter.verify(function(error, success) {
+  if (error) {
+    console.log('Email server connection error:', error);
+  } else {
+    console.log("Email server connection successful");
+  }
+});
 
 // CORS configuration
 app.use(cors({
@@ -131,12 +154,61 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
+
+async function readJSONReport(repoRoot) {
+  return new Promise((resolve, reject) => {
+    // Update the path to match your directory structure - removed extra 'test' directory
+    const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
+    console.log('reportPath', reportPath);
+    fs.readFile(reportPath, 'utf8', (err, data) => {
+      if (err) {
+        console.error(`Failed to read JSON report at path: ${reportPath}`);
+        reject(new Error(`Failed to read JSON report: ${err.message}`));
+        return;
+      }
+
+      try {
+        const jsonContent = JSON.parse(data);
+        resolve(jsonContent);
+      } catch (error) {
+        reject(new Error('Invalid JSON format in test results file'));
+      }
+    });
+  });
+}
+async function sendReportEmail(recipientEmail, reportContent, filename) {
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: recipientEmail,
+    subject: `Test Report for ${filename}`,
+    html: `
+      <h2>Test Execution Report</h2>
+      <p>Please find attached the test execution report for ${filename}.</p>
+      <p>Report generated at: ${new Date().toLocaleString()}</p>
+    `,
+    attachments: [
+      {
+        filename: 'TestReport.html',
+        content: reportContent
+      }
+    ]
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('Report email sent successfully');
+    return true;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw error;
+  }
+}
+
 //compile and run java files uploaded
 async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
   return new Promise((resolve, reject) => {
     const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
     const projectDir = path.join(__dirname, '..', '..', '..', 'test');
-
     exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
         return reject(new Error(`Compilation failed: ${compileStderr}`));
@@ -149,6 +221,23 @@ async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
           output: runStdout,
           reportPath: path.join(projectDir, 'test-output', 'ExtentReports.html'),
         });
+      });
+    });
+  });
+}
+
+async function compileJavaFileWithMaven(testFilePath) {
+  return new Promise((resolve, reject) => {
+    const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
+    const projectDir = path.join(__dirname, '..', '..', '..', 'test');
+
+    exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
+      if (compileError) {
+        return reject(new Error(`Compilation failed: ${compileStderr}`));
+      }
+      resolve({
+        success: true,
+        output: compileStdout
       });
     });
   });
@@ -171,6 +260,16 @@ async function saveJavaFileToDB(file, fileContent) {
   return javaFilesCollection.insertOne(javaFileDocument);
 }
 
+async function saveJSONReportToDB(reportContent) {
+  const reportsCollection = db.collection('JSONREPORTS');
+  const currentDate = new Date();
+  const reportDocument = {
+    date: currentDate.toISOString().split('T')[0],
+    content: reportContent,
+  };
+  return reportsCollection.insertOne(reportDocument);
+}
+
 //saves the report file to the database
 async function saveTestReportToDB(reportContent, javaFile) {
   const reportsCollection = db.collection('testReports');
@@ -189,41 +288,65 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded.' });
   }
 
+  const recipientEmail = req.body.email;
+  if (!recipientEmail) {
+    return res.status(400).json({ error: 'Email address is required.' });
+  }
+
   const uploadedFilePath = path.join(uploadDir, req.file.filename);
   const testClassName = req.file.filename.replace('.java', '');
-  let result;
-
+  const repoRoot = path.join(__dirname, '..', '..', '..', '..');
+  console.log('repoRoot',repoRoot);
   try {
     // Step 1: Compile and run the Java file with Maven
     console.log('Compiling and running test with Maven...');
-    result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+    const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
 
-    // Step 2: If compilation is successful, save the Java file to the database
-    const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
-    await saveJavaFileToDB(req.file, fileContent);
+    // Step 2: Read JSON report with correct path
+    const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
 
-    // Step 3: If report exists, save the report to the database
-    if (fs.existsSync(result.reportPath)) {
-      const reportContent = fs.readFileSync(result.reportPath, 'utf8');
-      await saveTestReportToDB(reportContent, req.file.originalname);
+    // Add check to ensure directory exists
+    const reportDir = path.dirname(reportPath);
+    if (!fs.existsSync(reportDir)) {
+      fs.mkdirSync(reportDir, { recursive: true });
+    }
+    console.log('dir',__dirname);
+    console.log('Report path:',reportPath);
+    // Wait for file to be created (add timeout)
+    let attempts = 0;
+    const maxAttempts = 20;
+    while (!fs.existsSync(reportPath) && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      attempts++;
     }
 
-    // Step 4: Clean up the uploaded file
+    if (!fs.existsSync(reportPath)) {
+      throw new Error(`Report file not found after ${maxAttempts} seconds`);
+    }
+
+    const reportContent = fs.readFileSync(reportPath, 'utf8');
+
+    // Rest of the steps...
+    await saveJSONReportToDB(reportContent);
+    await sendReportEmail(recipientEmail, reportContent, req.file.originalname);
+
+    // Clean up
     fs.unlinkSync(uploadedFilePath);
 
-    // Respond with success
     res.json({
       success: true,
-      message: 'Java file processed and report saved.',
+      message: 'Java file processed, JSON report saved, and email sent.'
     });
+
   } catch (err) {
     console.error('Error processing file:', err);
-    // If there is an error during any of the steps, clean up the uploaded file
     if (fs.existsSync(uploadedFilePath)) {
       fs.unlinkSync(uploadedFilePath);
     }
-    // If compilation fails, the file will not be saved to the database
-    res.status(500).json({ error: 'Error processing file.', details: err.message });
+    res.status(500).json({
+      error: 'Error processing file.',
+      details: err.message
+    });
   }
 });
 
@@ -232,24 +355,49 @@ app.post('/api/upload-code', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'No file uploaded' });
   }
 
+  const uploadedFilePath = path.join(uploadDir, req.file.filename);
+
   try {
+    // Step 1: Attempt to compile the Java file
+    console.log('Compiling Java file...');
+    await compileJavaFileWithMaven(uploadedFilePath);
+
+    // Step 2: If compilation is successful, read the file content
+    const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
+
+    // Step 3: Save to database
     const codeDocument = {
       filename: req.file.originalname,
-      content: req.file.buffer.toString('utf8'),
+      content: fileContent,
       uploadDate: new Date(),
-      size: req.file.size
+      size: req.file.size,
+      compilationStatus: 'success'
     };
+    await saveJavaFileToDB(req.file, fileContent);
+    //const result = await db.collection('javaTestCodes').insertOne(codeDocument);
 
-    const result = await db.collection('javaTestCodes').insertOne(codeDocument);
+    // Step 4: Clean up the uploaded file
+    fs.unlinkSync(uploadedFilePath);
 
     res.json({
       success: true,
       fileId: result.insertedId,
-      filename: codeDocument.filename
+      filename: codeDocument.filename,
+      message: 'File compiled successfully and saved to database'
     });
+
   } catch (err) {
-    console.error('Upload error:', err);
-    res.status(500).json({ error: 'Upload failed' });
+    console.error('Compilation or upload error:', err);
+
+    // Clean up the uploaded file in case of error
+    if (fs.existsSync(uploadedFilePath)) {
+      fs.unlinkSync(uploadedFilePath);
+    }
+
+    res.status(500).json({
+      error: 'Compilation failed or upload error',
+      details: err.message
+    });
   }
 });
 
@@ -307,151 +455,27 @@ app.get('/api/all-reports', async (req, res) => {
   }
 });
 
-// Handle file upload and processing
-//app.post('/api/upload', upload.single('file'), async (req, res) => {
-//  if (!req.file) {
-//    return res.status(400).json({ error: 'No file uploaded.' });
-//  }
-//
-//  const uploadedFilePath = path.join(uploadDir, req.file.filename);
-//  console.log('File uploaded successfully:', uploadedFilePath);
-//
-//  try {
-//    // Read the content of the uploaded Java file
-//    const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
-//    console.log('File content read successfully.');
-//
-//    // Define the document to insert or update in MongoDB
-//    const javaFileDocument = {
-//      filename: req.file.filename,
-//      originalName: req.file.originalname,
-//      size: req.file.size,
-//      content: fileContent,   // Store the entire content of the uploaded Java file
-//      uploadDate: new Date(),  // Timestamp when the file was uploaded
-//    };
-//
-//    // Use a new collection to store Java files
-//    const javaFilesCollection = db.collection('javaTestCodes');
-//
-//    // Check if a document with the same filename already exists
-//    const existingFile = await javaFilesCollection.findOne({ filename: req.file.filename });
-//
-//    if (existingFile) {
-//      // If the file already exists, update the existing document
-//      const updateResult = await javaFilesCollection.updateOne(
-//        { filename: req.file.filename },  // Find by filename
-//        { $set: javaFileDocument }        // Update the document with new content
-//      );
-//      console.log('Java file updated in MongoDB:', updateResult);
-//    } else {
-//      // If the file doesn't exist, insert a new document
-//      const insertResult = await javaFilesCollection.insertOne(javaFileDocument);
-//      console.log('Java file saved to MongoDB:', insertResult);
-//    }
-//
-//    const testClassName = req.file.filename.replace('.java', '');
-//    console.log('Compiling and running test with Maven...');
-//    const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
-//
-//    // After running tests, read the ExtentReports.html
-//    const reportFilePath = path.join('../../../test/test/test-output', 'ExtentReports.html');
-//    console.log(reportFilePath);
-//    if (fs.existsSync(reportFilePath)) {
-//      const reportContent = fs.readFileSync(reportFilePath, 'utf8');
-//
-//      // Define the document to insert/update for the test report
-//      const reportDocument = {
-//        reportName: 'ExtentReports.html',
-//        content: reportContent,
-//        reportDate: new Date(),  // Timestamp when the report was generated
-//        javaFile:req.file.originalname,
-//      };
-//
-//      const reportsCollection = db.collection('testReports');  // Use a separate collection for test reports
-//
-//      // Insert the report into the database
-//      const insertReportResult = await reportsCollection.insertOne(reportDocument);
-//      console.log('Test report saved to MongoDB:', insertReportResult);
-//    } else {
-//      console.log('Test report not found.');
-//    }
-//
-//    // Optionally delete the file after it's saved to DB
-//    fs.unlinkSync(uploadedFilePath);
-//    console.log('File deleted after saving to DB.');
-//
-//    // Respond to the client
-//    res.json({
-//      success: true,
-//      file: {
-//        filename: req.file.filename,
-//        originalName: req.file.originalname,
-//        size: req.file.size
-//      },
-//      message: 'Java file uploaded and saved to MongoDB, and report saved to DB.',
-//    });
-//
-//  } catch (err) {
-//    console.error('Error processing file:', err);
-//    res.status(500).json({
-//      error: 'Error processing file.',
-//      details: err.message
-//    });
-//
-//    // Cleanup uploaded file in case of error
-//    try {
-//      if (fs.existsSync(uploadedFilePath)) {
-//        fs.unlinkSync(uploadedFilePath);
-//        console.log('File deleted after error.');
-//      }
-//    } catch (cleanupError) {
-//      console.error('Error during cleanup:', cleanupError);
-//    }
-//  }
-//});
+app.get('/api/json-reports', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
 
-//// Function to compile and run the uploaded Java file using Maven
-//async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
-//  return new Promise((resolve, reject) => {
-//    const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
-//    const projectDir = path.join(__dirname, '..', '..', '..', 'test');
-//
-//    console.log('Project directory:', projectDir);
-//    console.log('Running command:', `${mvnCommand} clean compile`);
-//
-//    exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
-//      if (compileError) {
-//        console.error('Compilation stderr:', compileStderr);
-//        console.error('Compilation stdout:', compileStdout);
-//        reject(new Error(`Maven compilation failed: ${compileStderr}`));
-//        return;
-//      }
-//
-//      console.log('Compilation successful. Running tests...');
-//
-//      exec(`${mvnCommand} exec:java -Dexec.mainClass="com.test.test.${testClassName}"`,
-//        { cwd: projectDir },
-//        (runError, runStdout, runStderr) => {
-//          if (runError) {
-//            console.error('Test execution stderr:', runStderr);
-//            console.error('Test execution stdout:', runStdout);
-//            reject(new Error(`Test execution failed: ${runStderr}`));
-//            return;
-//          }
-//
-//          // Check if report was generated
-//          const reportPath = path.join(projectDir, 'test-output', 'ExtentReports.html');
-//          if (fs.existsSync(reportPath)) {
-//            console.log('Test report generated successfully');
-//          }
-//
-//          resolve({
-//            output: runStdout,
-//            reportPath: '/reports/ExtentReports.html'
-//          });
-//      });
-//    });
-//  });
-//}
+  try {
+    const reportsCollection = db.collection('JSONREPORTS');
+    const reports = await reportsCollection.find()
+      .sort({ date: -1 })
+      .toArray();
+
+    res.json(reports);
+  } catch (err) {
+    console.error('Error fetching JSON reports:', err);
+    res.status(500).json({
+      error: 'Error fetching reports.',
+      details: err.message
+    });
+  }
+});
+
+
 
 
