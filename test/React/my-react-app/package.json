@@ -9,6 +9,7 @@
     "@testing-library/user-event": "^13.5.0",
     "chart.js": "^4.4.7",
     "chartjs-adapter-date-fns": "^3.0.0",
+    "child_process": "^1.0.2",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.7",
@@ -61,9 +62,13 @@
   "proxy": "http://localhost:8080",
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
+
+    "concurrently": "^9.1.2"
+
     "autoprefixer": "^10.4.20",
-    "concurrently": "^9.0.1",
+
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17"
+
   }
 }

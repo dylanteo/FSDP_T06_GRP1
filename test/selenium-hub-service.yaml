@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: selenium-hub
+spec:
+  type: NodePort
+  ports:
+    - port: 4442
+      targetPort: 4442
+      protocol: TCP
+      name: event-publish
+    - port: 4443
+      targetPort: 4443
+      protocol: TCP
+      name: event-subscribe
+    - port: 4444
+      targetPort: 4444
+      protocol: TCP
+      name: grid-ui
+      nodePort: 30000 # Optional: Expose externally
+  selector:
+    app: selenium-hub

@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: selenium-node-edge
+  labels:
+    app: selenium-node-edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: selenium-node-edge
+  template:
+    metadata:
+      labels:
+        app: selenium-node-edge
+    spec:
+      containers:
+        - name: selenium-node-edge
+          image: selenium/node-edge:latest
+          ports:
+            - containerPort: 5555
+          env:
+            - name: SE_EVENT_BUS_HOST
+              value: selenium-hub
+            - name: SE_EVENT_BUS_PUBLISH_PORT
+              value: "4442"
+            - name: SE_EVENT_BUS_SUBSCRIBE_PORT
+              value: "4443"
+            - name: SE_NODE_MAX_SESSIONS
+              value: "3"
+            - name: SE_NODE_OVERRIDE_MAX_SESSIONS
+              value: "true"
