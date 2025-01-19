@@ -18,6 +18,7 @@
     "mongodb": "^6.12.0",
     "mongoose": "^8.9.2",
     "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.9.16",
     "papaparse": "^5.4.1",
     "path": "^0.12.7",
     "react": "^18.3.1",
@@ -60,6 +61,9 @@
   "proxy": "http://localhost:8080",
   "devDependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
-    "concurrently": "^9.0.1"
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^3.4.17"
   }
 }
