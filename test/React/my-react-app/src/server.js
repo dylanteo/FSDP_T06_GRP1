@@ -1,4 +1,4 @@
-//server.js
+// server.js
 
 const express = require('express');
 const multer = require('multer');
@@ -12,6 +12,94 @@ require('dotenv').config();
 
 const app = express();
 
+// ==============================
+// 1. TestCounter logic inlined
+// ==============================
+const fsPromises = fs.promises;
+
+/**
+ * Count test cases by browser from a given Java file with a @DataProvider.
+ */
+async function countTestCasesByBrowser(filePath) {
+  try {
+    const content = await fsPromises.readFile(filePath, "utf8");
+
+    // Regex to find the @DataProvider block (handles multiline content)
+    const dataProviderRegex =
+      /@DataProvider\s*\(.*?\)\s*public\s*Object\[\]\[\]\s*\w+\s*\(\)\s*\{([\s\S]*?)\};/;
+    const match = content.match(dataProviderRegex);
+
+    if (match) {
+      const dataProviderContent = match[1];
+
+      // Regex to find all test cases within the 2D array
+      const testCaseRegex = /\{["'](chrome|firefox|edge)["'],/g;
+      const browserCounts = { chrome: 0, firefox: 0, edge: 0 };
+
+      let testCaseMatch;
+      while ((testCaseMatch = testCaseRegex.exec(dataProviderContent)) !== null) {
+        const browser = testCaseMatch[1].toLowerCase();
+        if (browserCounts[browser] !== undefined) {
+          browserCounts[browser]++;
+        }
+      }
+      return browserCounts;
+    } else {
+      console.error("No @DataProvider method found in the file.");
+      return { chrome: 0, firefox: 0, edge: 0 };
+    }
+  } catch (error) {
+    console.error(`Error reading or parsing the file: ${error.message}`);
+    return { chrome: 0, firefox: 0, edge: 0 };
+  }
+}
+
+/**
+ * Calculate how many replicas are needed based on the number of test cases.
+ * Example: 1 replica per 3 tests, rounded up.
+ */
+function calculateReplicas(testCount) {
+  return Math.ceil(testCount / 3);
+}
+
+/**
+ * Update the 'replicas:' field in a Kubernetes deployment YAML file.
+ */
+async function updateKubernetesDeployment(deploymentFilePath, replicas) {
+  try {
+    const deploymentContent = await fsPromises.readFile(deploymentFilePath, "utf8");
+    const replicasRegex = /replicas:\s*\d+/;
+    const updatedContent = deploymentContent.replace(replicasRegex, `replicas: ${replicas}`);
+
+    await fsPromises.writeFile(deploymentFilePath, updatedContent, "utf8");
+    console.log(`Updated replicas to ${replicas} in ${path.basename(deploymentFilePath)}.`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating deployment file: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Apply a Kubernetes deployment using kubectl.
+ */
+function applyKubernetesDeployment(deploymentFilePath) {
+  return new Promise((resolve, reject) => {
+    exec(`kubectl apply -f ${deploymentFilePath}`, (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error applying ${deploymentFilePath}: ${stderr}`);
+        return reject(error);
+      }
+      console.log(`Applied ${deploymentFilePath} successfully: ${stdout}`);
+      resolve(stdout);
+    });
+  });
+}
+// ==============================
+// End of TestCounter logic
+// ==============================
+
+
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
@@ -22,8 +110,8 @@ const transporter = nodemailer.createTransport({
     pass: process.env.EMAIL_PASS
   },
   tls: {
-        rejectUnauthorized: false
-      }
+    rejectUnauthorized: false
+  }
 });
 
 transporter.verify(function(error, success) {
@@ -119,7 +207,7 @@ if (!fs.existsSync(testOutputDir)) {
 }
 
 // File upload middleware setup
-const storage = multer.diskStorage({
+const multerStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (!fs.existsSync(uploadDir)) {
       try {
@@ -142,7 +230,7 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({
-  storage: storage,
+  storage: multerStorage,
   fileFilter: (req, file, cb) => {
     if (file.originalname.endsWith('.java')) {
       cb(null, true);
@@ -155,9 +243,11 @@ const upload = multer({
   }
 });
 
+/**
+ * Helper to read JSON test report from a known location.
+ */
 async function readJSONReport(repoRoot) {
   return new Promise((resolve, reject) => {
-    // Update the path to match your directory structure - removed extra 'test' directory
     const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
     console.log('reportPath', reportPath);
     fs.readFile(reportPath, 'utf8', (err, data) => {
@@ -166,7 +256,6 @@ async function readJSONReport(repoRoot) {
         reject(new Error(`Failed to read JSON report: ${err.message}`));
         return;
       }
-
       try {
         const jsonContent = JSON.parse(data);
         resolve(jsonContent);
@@ -176,6 +265,10 @@ async function readJSONReport(repoRoot) {
     });
   });
 }
+
+/**
+ * Helper to send the test report via email.
+ */
 async function sendReportEmail(recipientEmail, reportContent, filename) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -204,7 +297,9 @@ async function sendReportEmail(recipientEmail, reportContent, filename) {
   }
 }
 
-//compile and run java files uploaded
+/**
+ * Compile and run Java file with Maven (clean compile + exec:java).
+ */
 async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
   return new Promise((resolve, reject) => {
     const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
@@ -213,24 +308,30 @@ async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
       if (compileError) {
         return reject(new Error(`Compilation failed: ${compileStderr}`));
       }
-      exec(`${mvnCommand} exec:java -Dexec.mainClass="com.test.test.${testClassName}"`, { cwd: projectDir }, (runError, runStdout, runStderr) => {
-        if (runError) {
-          return reject(new Error(`Execution failed: ${runStderr}`));
+      exec(
+        `${mvnCommand} exec:java -Dexec.mainClass="com.test.test.${testClassName}"`,
+        { cwd: projectDir },
+        (runError, runStdout, runStderr) => {
+          if (runError) {
+            return reject(new Error(`Execution failed: ${runStderr}`));
+          }
+          resolve({
+            output: runStdout,
+            reportPath: path.join(projectDir, 'test-output', 'ExtentReports.html'),
+          });
         }
-        resolve({
-          output: runStdout,
-          reportPath: path.join(projectDir, 'test-output', 'ExtentReports.html'),
-        });
-      });
+      );
     });
   });
 }
 
+/**
+ * Only compile (no run).
+ */
 async function compileJavaFileWithMaven(testFilePath) {
   return new Promise((resolve, reject) => {
     const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
     const projectDir = path.join(__dirname, '..', '..', '..', 'test');
-
     exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
         return reject(new Error(`Compilation failed: ${compileStderr}`));
@@ -243,7 +344,9 @@ async function compileJavaFileWithMaven(testFilePath) {
   });
 }
 
-//saves the java file uploaded to database
+/**
+ * Save the Java file contents to the MongoDB.
+ */
 async function saveJavaFileToDB(file, fileContent) {
   const javaFilesCollection = db.collection('javaTestCodes');
   const javaFileDocument = {
@@ -260,6 +363,9 @@ async function saveJavaFileToDB(file, fileContent) {
   return javaFilesCollection.insertOne(javaFileDocument);
 }
 
+/**
+ * Save JSON test report to MongoDB.
+ */
 async function saveJSONReportToDB(reportContent) {
   const reportsCollection = db.collection('JSONREPORTS');
   const currentDate = new Date();
@@ -270,7 +376,9 @@ async function saveJSONReportToDB(reportContent) {
   return reportsCollection.insertOne(reportDocument);
 }
 
-//saves the report file to the database
+/**
+ * Save the test report (HTML) to MongoDB.
+ */
 async function saveTestReportToDB(reportContent, javaFile) {
   const reportsCollection = db.collection('testReports');
   const reportDocument = {
@@ -282,7 +390,9 @@ async function saveTestReportToDB(reportContent, javaFile) {
   return reportsCollection.insertOne(reportDocument);
 }
 
+// ===========================================
 // Endpoint: Upload and run Java file
+// ===========================================
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded.' });
@@ -296,23 +406,48 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   const uploadedFilePath = path.join(uploadDir, req.file.filename);
   const testClassName = req.file.filename.replace('.java', '');
   const repoRoot = path.join(__dirname, '..', '..', '..', '..');
-  console.log('repoRoot',repoRoot);
+
   try {
-    // Step 1: Compile and run the Java file with Maven
+    // 1. Compile and run the Java file with Maven
     console.log('Compiling and running test with Maven...');
     const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
 
-    // Step 2: Read JSON report with correct path
-    const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
+    // 2. Now count the test cases by browser from the uploaded file
+    const browserCounts = await countTestCasesByBrowser(uploadedFilePath);
+    console.log(`Test case counts by browser: ${JSON.stringify(browserCounts, null, 2)}`);
 
-    // Add check to ensure directory exists
+    // 3. Update and apply the Kubernetes deployments based on test counts
+    // Adjust the directory if your YAML files are elsewhere
+    const deploymentDir = path.join(__dirname, '..', '..', '..');
+    const deploymentPaths = {
+      chrome: path.join(deploymentDir, "selenium-node-chrome-deployment.yaml"),
+      firefox: path.join(deploymentDir, "selenium-node-firefox-deployment.yaml"),
+      edge: path.join(deploymentDir, "selenium-node-edge-deployment.yaml")
+    };
+
+    const updateAndApplyPromises = Object.entries(deploymentPaths).map(async ([browser, deploymentFilePath]) => {
+      const testCount = browserCounts[browser] || 0;
+      const replicas = calculateReplicas(testCount);
+      if (replicas > 0) {
+        const updated = await updateKubernetesDeployment(deploymentFilePath, replicas);
+        if (updated) {
+          await applyKubernetesDeployment(deploymentFilePath);
+        }
+      } else {
+        console.log(`No test cases for ${browser}. Deployment not updated.`);
+      }
+    });
+
+    await Promise.all(updateAndApplyPromises);
+
+    // 4. Read JSON report (wait until the file is created)
+    const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
     const reportDir = path.dirname(reportPath);
     if (!fs.existsSync(reportDir)) {
       fs.mkdirSync(reportDir, { recursive: true });
     }
-    console.log('dir',__dirname);
-    console.log('Report path:',reportPath);
-    // Wait for file to be created (add timeout)
+
+    // Wait up to 20 seconds for the file to exist
     let attempts = 0;
     const maxAttempts = 20;
     while (!fs.existsSync(reportPath) && attempts < maxAttempts) {
@@ -326,11 +461,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     const reportContent = fs.readFileSync(reportPath, 'utf8');
 
-    // Rest of the steps...
+    // 5. Save JSON report to DB and send email
     await saveJSONReportToDB(reportContent);
     await sendReportEmail(recipientEmail, reportContent, req.file.originalname);
 
-    // Clean up
+    // 6. Clean up the uploaded .java file if desired
     fs.unlinkSync(uploadedFilePath);
 
     res.json({
@@ -350,6 +485,9 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
+// ===========================================
+// Endpoint: Upload code (compile only)
+// ===========================================
 app.post('/api/upload-code', upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
@@ -373,7 +511,7 @@ app.post('/api/upload-code', upload.single('file'), async (req, res) => {
       size: req.file.size,
       compilationStatus: 'success'
     };
-    await saveJavaFileToDB(req.file, fileContent);
+     const result = await saveJavaFileToDB(req.file, fileContent);
     //const result = await db.collection('javaTestCodes').insertOne(codeDocument);
 
     // Step 4: Clean up the uploaded file
@@ -410,7 +548,6 @@ app.use((err, req, res, next) => {
     }
     return res.status(400).json({ error: err.message });
   }
-  // For other errors
   return res.status(500).json({ error: 'Server error: ' + err.message });
 });
 
@@ -418,6 +555,10 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// ===========================================
+// Additional endpoints for DB data retrieval
+// ===========================================
 
 // Fetch all Java code from MongoDB
 app.get('/api/all-java-code', async (req, res) => {
@@ -455,11 +596,11 @@ app.get('/api/all-reports', async (req, res) => {
   }
 });
 
+// Fetch JSON reports from MongoDB
 app.get('/api/json-reports', async (req, res) => {
   if (!db) {
     return res.status(500).json({ error: 'Database not connected' });
   }
-
   try {
     const reportsCollection = db.collection('JSONREPORTS');
     const reports = await reportsCollection.find()
@@ -475,7 +616,3 @@ app.get('/api/json-reports', async (req, res) => {
     });
   }
 });
-
-
-
-

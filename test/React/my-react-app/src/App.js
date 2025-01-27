@@ -18,7 +18,7 @@ const AnalyticsPage = ({ testResults }) => (
 // Code Page Component
 const CodePage = ({ javaCode, handleJavaFileChange, handleUploadButtonClick, uploadStatus }) => (
   <div className="page-container">
-    <h2>Code Repository</h2>
+    <h2>TestCase Bank</h2>
     <div className="controls">
       <button
         className="btn create-btn"

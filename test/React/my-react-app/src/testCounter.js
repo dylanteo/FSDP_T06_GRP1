@@ -78,7 +78,7 @@ function applyKubernetesDeployment(deploymentFilePath) {
 }
 
 async function main() {
-    const testCaseFilePath = '../../../registerTestCase.java'; // Path to your Java test file
+    const testCaseFilePath = '../../../XYZAddCustomer.java'; // Path to your Java test file
     const deploymentDir = '../../../'; // Directory where your deployment files are located
 
     const deploymentPaths = {

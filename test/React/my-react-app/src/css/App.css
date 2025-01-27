@@ -387,7 +387,7 @@ th {
 }
 
 .page-container {
-  background-color: white;
+  background-color: #ffffff !important; /* Set to white */
   border-radius: 8px;
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -728,7 +728,7 @@ input[type="datetime-local"]:disabled {
 /*HomePage*/
 .dashboard {
           min-height: 100vh;
-          background-color: #f9fafb;
+          background-color: white;
         }
 
         .header {
@@ -906,3 +906,535 @@ input[type="datetime-local"]:disabled {
             display: none;
           }
         }
+
+        .charts-container {
+          display: flex;
+          justify-content: space-around;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          margin: 20px 0;
+        }
+
+        .chart-wrapper {
+          flex: 1;
+          max-width: 500px; /* Increase the width */
+          margin: 15px; /* Add a bit more spacing */
+          background-color: #ffffff; /* Ensure the background is white */
+          padding: 30px; /* Increase padding for a cleaner look */
+          border-radius: 8px;
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+        }
+
+        .chart-wrapper h3 {
+          text-align: center;
+          margin-bottom: 20px; /* More spacing below the title */
+          font-size: 20px; /* Slightly larger font for chart title */
+          color: #333;
+        }
+
+        .test-case-section {
+          margin-top: 20px;
+          padding: 20px;
+          border-top: 1px solid #e0e0e0;
+        }
+
+        .test-case-card {
+          border: 1px solid #e0e0e0;
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 16px;
+          background-color: #f9f9f9;
+        }
+
+/* ============== CODETABLE REDESIGN STYLES ============== */
+
+/* Outer container that wraps the entire CodeTable content */
+.enhanced-code-table-container {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Title above the table */
+.enhanced-code-table-container .table-title {
+  margin: 0 0 10px;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+/* Top controls row (Scheduler + Button) */
+.enhanced-code-table-container .top-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.enhanced-code-table-container .scheduler-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.enhanced-code-table-container .schedule-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.95rem;
+}
+.enhanced-code-table-container .datetime-input {
+  padding: 4px 6px;
+  font-size: 0.95rem;
+}
+
+/* The 'Run Selected' button */
+.enhanced-code-table-container .run-selected-btn {
+  background-color: #007bff;
+  color: white;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+.enhanced-code-table-container .run-selected-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+.enhanced-code-table-container .run-selected-btn:disabled {
+  background-color: #c0c0c0;
+  cursor: not-allowed;
+}
+
+/* Scroll container around the table (optional max-height) */
+.enhanced-code-table-container .table-scroll-container {
+  overflow-x: auto;
+  max-height: 500px; /* If you want vertical scroll for large sets */
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* The table itself */
+.enhanced-code-table-container .enhanced-code-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.enhanced-code-table-container .enhanced-code-table thead.sticky-header th {
+  position: sticky;
+  top: 0; /* Make it stick to the top of the container */
+  background-color: #e9ecef;
+  z-index: 10;
+}
+.enhanced-code-table-container .enhanced-code-table th,
+.enhanced-code-table-container .enhanced-code-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  vertical-align: top;
+  font-size: 0.9rem;
+}
+
+/* Slight hover effect on rows */
+.enhanced-code-table-container .table-row:hover {
+  background-color: #f7f9fa;
+}
+
+/* Highlight the row if selected (checkbox checked) */
+.enhanced-code-table-container .selected-row {
+  background-color: #ebf8ff !important; /* Soft blue */
+}
+
+/* Column sizing example classes (optional) */
+.enhanced-code-table-container .checkbox-column {
+  width: 60px;
+}
+.enhanced-code-table-container .filename-column {
+  width: 180px;
+}
+.enhanced-code-table-container .code-column {
+  width: 300px;
+}
+.enhanced-code-table-container .date-column {
+  width: 140px;
+}
+.enhanced-code-table-container .status-column {
+  width: 160px;
+}
+
+/* Code snippet within each row */
+.enhanced-code-table-container .code-snippet {
+  background-color: #f1f1f1;
+  padding: 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  max-height: 80px; /* Show a small snippet */
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+.enhanced-code-table-container .see-more-btn {
+  background-color: transparent;
+  color: #007bff;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  padding: 0;
+}
+.enhanced-code-table-container .see-more-btn:hover {
+  color: #0056b3;
+}
+
+/* Status badges */
+.enhanced-code-table-container .status-badge {
+  display: inline-block;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #fff;
+  font-weight: 600;
+}
+.enhanced-code-table-container .status-badge.scheduled {
+  background-color: #17a2b8;
+}
+.enhanced-code-table-container .status-badge.running {
+  background-color: #ffc107;
+  color: #333;
+}
+.enhanced-code-table-container .status-badge.completed {
+  background-color: #28a745;
+}
+.enhanced-code-table-container .status-badge.error {
+  background-color: #dc3545;
+}
+
+/* ============== CODETABLE REDESIGN STYLES ============== */
+
+/* Outer container that wraps the entire CodeTable content */
+.enhanced-code-table-container {
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Example: If you renamed "Code Repository" to "Code Bank" in the JS code:
+   .enhanced-code-table-container .table-title { content won't matter } */
+
+/* If your top row has the filter or other items, adjust as needed */
+.top-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.run-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.run-mode-options {
+  display: flex;
+  gap: 16px;
+  font-size: 0.95rem;
+}
+
+.run-mode-options label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Make the run selected button bigger, and not cramped by filter */
+.run-selected-btn {
+  background-color: #007bff;
+  color: #fff;
+  padding: 14px 24px; /* bigger */
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.run-selected-btn:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+.run-selected-btn:disabled {
+  background-color: #c0c0c0;
+  cursor: not-allowed;
+}
+
+/* Make the upload button even bigger */
+.upload-java-btn {
+  background-color: #007bff;
+  font-size: 1.1rem;
+  padding: 14px 24px; /* bigger than before */
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+.upload-java-btn:hover {
+  background-color: #0056b3;
+}
+
+/* For the filter input container */
+.filter-container {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  margin-right: 12px;
+}
+.filter-container label {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.filter-container input {
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Table scroll area */
+.table-scroll-container {
+  overflow-x: auto;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+/* Make it nice and tall */
+.tall-container {
+  min-height: 800px;
+  max-height: none;
+  overflow-y: auto;
+}
+
+.enhanced-code-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Sticky header for the table */
+.enhanced-code-table thead.sticky-header th {
+  position: sticky;
+  top: 0;
+  background-color: #e9ecef;
+  z-index: 10;
+}
+
+.enhanced-code-table th,
+.enhanced-code-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+  vertical-align: top;
+  font-size: 0.9rem;
+}
+
+/* Hover effect on rows */
+.table-row:hover {
+  background-color: #f7f9fa;
+}
+
+/* Selected row highlight */
+.selected-row {
+  background-color: #ebf8ff !important;
+}
+
+/* Make file name bigger & nicer font */
+.file-name-cell {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 1.05rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+/* Code snippet */
+.code-snippet {
+  background-color: #f1f1f1;
+  padding: 6px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  max-height: 80px;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+
+.see-more-btn {
+  background-color: transparent;
+  color: #007bff;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  padding: 0;
+}
+.see-more-btn:hover {
+  color: #0056b3;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #fff;
+  font-weight: 600;
+}
+.status-badge.scheduled {
+  background-color: #17a2b8;
+}
+.status-badge.running {
+  background-color: #ffc107;
+  color: #333;
+}
+.status-badge.completed {
+  background-color: #28a745;
+}
+.status-badge.error {
+  background-color: #dc3545;
+}
+
+/* Modal for code "See More" */
+.code-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.code-modal-content {
+  background-color: #fff;
+  width: 90%;
+  max-width: 800px;
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  max-height: 80vh;
+  overflow-y: auto;
+}
+.code-modal-content h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  margin-bottom: 12px;
+}
+.close-modal-btn {
+  margin-top: 10px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  float: right;
+}
+.close-modal-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Confirmation Modal */
+.run-confirm-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.run-confirm-modal-content {
+  background-color: #fff;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+.run-confirm-modal-content h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+.run-confirm-modal-content p {
+  margin-bottom: 10px;
+}
+.run-confirm-modal-content ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+  list-style-type: disc;
+}
+.confirm-modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.confirm-modal-buttons button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.confirm-modal-buttons button:hover {
+  background-color: #0056b3;
+}
+.confirm-modal-buttons button:first-of-type {
+  background-color: #6c757d;
+}
+.confirm-modal-buttons button:first-of-type:hover {
+  background-color: #5a6268;
+}
+
+/* Pagination controls */
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+.pagination-controls button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.pagination-controls button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+.pagination-controls span {
+  font-weight: 500;
+}
