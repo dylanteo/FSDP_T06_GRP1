@@ -39,11 +39,9 @@ pipeline {
         stage('Deploy Selenium Hub and Nodes') {
             steps {
                 script {
-                    withKubeConfig([credentialsId: 'your-kube-credentials-id']) {
-                        // Apply all Kubernetes deployment YAML files for Selenium
-                        DEPLOYMENT_FILES.each { file ->
-                            bat "kubectl apply -f ${file} --namespace=${K8S_NAMESPACE}"
-                        }
+                    // Apply all Kubernetes deployment YAML files for Selenium
+                    DEPLOYMENT_FILES.split(',').each { file ->
+                        bat "kubectl apply -f ${file} --namespace=${K8S_NAMESPACE}"
                     }
                 }
             }
