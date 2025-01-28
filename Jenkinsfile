@@ -2,14 +2,20 @@ pipeline {
     agent any
 
     environment {
-        // Define the directory where the app is located
         APP_DIR = 'test/React/my-react-app'
+        K8S_NAMESPACE = 'your-namespace'
+        DEPLOYMENT_FILES = [
+            'test/selenium-hub.yaml',
+            'test/selenium-hub-service.yaml',
+            'test/selenium-node-chrome-deployment.yaml',
+            'test/selenium-node-edge-deployment.yaml',
+            'test/selenium-node-firefox-deployment.yaml'
+        ]
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the source code from the repository
                 checkout scm
             }
         }
@@ -17,7 +23,6 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 script {
-                    // Navigate to the app directory and install npm dependencies
                     dir(APP_DIR) {
                         bat 'npm install'
                     }
@@ -25,12 +30,26 @@ pipeline {
             }
         }
 
-        stage('Start Development Server') {
+        stage('Start React Development Server') {
             steps {
                 script {
-                    // Run npm run dev in the background to start the development server
+                    // Start the React app locally without deploying to Kubernetes
                     dir(APP_DIR) {
                         bat 'start /B npm run dev'
+                        sleep 5 // Wait a bit for the server to start
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Selenium Hub and Nodes') {
+            steps {
+                script {
+                    withKubeConfig([credentialsId: 'your-kube-credentials-id']) {
+                        // Apply all Kubernetes deployment YAML files for Selenium
+                        DEPLOYMENT_FILES.each { file ->
+                            bat "kubectl apply -f ${file} --namespace=${K8S_NAMESPACE}"
+                        }
                     }
                 }
             }
@@ -39,15 +58,15 @@ pipeline {
 
     post {
         success {
-            echo 'Development server started successfully.'
+            echo 'Development server started and Selenium Hub and Nodes deployed successfully.'
         }
         failure {
-            echo 'Failed to start the development server.'
+            echo 'Failed to start development server or deploy Selenium Hub/nodes.'
         }
         always {
             script {
-                // Cleanup to ensure processes are terminated
-                bat 'taskkill /F /IM node.exe'  // Stop the React development server
+                // Clean up by stopping the React development server
+                bat 'taskkill /F /IM node.exe'
             }
         }
     }
