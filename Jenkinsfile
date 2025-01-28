@@ -4,7 +4,7 @@ pipeline {
     environment {
         KUBECONFIG = credentials('kubeconfig-file-id')
         APP_DIR = 'test/React/my-react-app'
-        K8S_NAMESPACE = 'your-namespace'
+        K8S_NAMESPACE = 'default'
         DEPLOYMENT_FILES = "test/selenium-hub.yaml,test/selenium-hub-service.yaml,test/selenium-node-chrome-deployment.yaml,test/selenium-node-edge-deployment.yaml,test/selenium-node-firefox-deployment.yaml"
     }
 
