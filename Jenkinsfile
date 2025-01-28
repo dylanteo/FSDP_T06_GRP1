@@ -4,11 +4,7 @@ pipeline {
     environment {
         APP_DIR = 'test/React/my-react-app'
         K8S_NAMESPACE = 'your-namespace'
-environment {
-        APP_DIR = 'test/React/my-react-app'
-        K8S_NAMESPACE = 'your-namespace'
         DEPLOYMENT_FILES = "test/selenium-hub.yaml,test/selenium-hub-service.yaml,test/selenium-node-chrome-deployment.yaml,test/selenium-node-edge-deployment.yaml,test/selenium-node-firefox-deployment.yaml"
-    }
     }
 
     stages {
