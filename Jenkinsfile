@@ -41,7 +41,7 @@ pipeline {
                 script {
                     // Apply all Kubernetes deployment YAML files for Selenium
                     DEPLOYMENT_FILES.split(',').each { file ->
-                        bat "kubectl apply -f ${file} --namespace=${K8S_NAMESPACE}"
+                        bat "kubectl apply -f ${file} --namespace=${K8S_NAMESPACE} --validate=false"
                     }
                 }
             }
