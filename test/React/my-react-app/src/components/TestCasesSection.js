@@ -26,12 +26,9 @@ const COLORS = ["#4caf50", "#f44336", "#ffc107"];
  */
 const renderCustomLabel = (props) => {
   const { cx, cy, midAngle, outerRadius, name, value } = props;
-
-  // If slice is zero, skip showing the label entirely
   if (value === 0) return null;
 
   const RADIAN = Math.PI / 180;
-  // Increase labelRadius to push text farther outside the donut
   const labelRadius = outerRadius + 30;
   const x = cx + labelRadius * Math.cos(-midAngle * RADIAN);
   const y = cy + labelRadius * Math.sin(-midAngle * RADIAN);
@@ -49,6 +46,84 @@ const renderCustomLabel = (props) => {
     </text>
   );
 };
+
+/*
+  Sub-component to handle fetching and displaying AI suggestions for failing steps.
+*/
+function FailingStepInsight({ step }) {
+  const [insight, setInsight] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // Only render if this step is a failure
+  if (step.status !== "fail") {
+    return null;
+  }
+
+  // Called when user clicks the button to fetch AI suggestions
+  async function handleGetInsight() {
+    try {
+      setLoading(true);
+      setError("");
+      setInsight(null);
+
+      const response = await fetch("http://localhost:5000/api/ai-insights", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        // We send the step's error message (or any relevant text) to the server
+        body: JSON.stringify({ errorMessage: step.message }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to get AI insight.");
+      }
+      const data = await response.json();
+      setInsight(data.insight);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: "8px" }}>
+      {/* Button to retrieve AI suggestion */}
+      <button
+        className="ai-insight-button"
+        onClick={(e) => {
+          e.stopPropagation(); // <-- This stops the row's onClick!
+          handleGetInsight();
+        }}
+        disabled={loading}
+      >
+        {loading ? "Fetching AI Insight..." : "Get AI Insight"}
+      </button>
+
+
+      {/* Show error if the fetch fails */}
+      {error && (
+        <p style={{ color: "red", marginTop: "5px" }}>
+          Error: {error}
+        </p>
+      )}
+
+      {/* Show the AI suggestion once it's loaded */}
+      {insight && (
+        <div className="ai-insight-container">
+          <div className="ai-insight-header">
+            AI Suggestion
+          </div>
+          <div className="ai-insight-content">
+            {insight}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const TestCaseSection = ({ testResults }) => {
   const [expandedDocument, setExpandedDocument] = useState(null);
@@ -104,7 +179,7 @@ const TestCaseSection = ({ testResults }) => {
       count: browserCounts[browser],
     }));
 
-    // Average test time by browser (based on steps)
+    // Average test time by browser
     const timeByBrowser = {};
     tests.forEach((test) => {
       const { browser, steps } = test;
@@ -126,7 +201,7 @@ const TestCaseSection = ({ testResults }) => {
       return { browser, avgMs };
     });
 
-    // Compute total test duration for entire doc (seconds) from all steps
+    // Compute total test duration for entire doc
     const totalTestDurationMs = tests.reduce((acc, test) => {
       if (test.steps && test.steps.length > 1) {
         const sTime = new Date(test.steps[0].timestamp);
@@ -137,7 +212,7 @@ const TestCaseSection = ({ testResults }) => {
     }, 0);
     const totalTestDurationSec = Math.round(totalTestDurationMs / 1000);
 
-    // Also find earliest doc-level startTime and latest doc-level endTime
+    // doc-level start/end
     let docStart = null;
     let docEnd = null;
     tests.forEach((test) => {
@@ -206,7 +281,6 @@ const TestCaseSection = ({ testResults }) => {
             borderRadius: "8px",
           }}
         >
-          {/*  Document Title and top-level times */}
           <h4 style={{ marginBottom: "5px" }}>{result.rootTestName}</h4>
           <p>Total Test Duration (seconds): {result.totalTestDurationSec}</p>
           <p>Start Time: {result.docStartTime}</p>
@@ -225,7 +299,7 @@ const TestCaseSection = ({ testResults }) => {
                   marginBottom: "50px",
                 }}
               >
-                {/* Donut Chart for test status */}
+                {/* Donut Chart */}
                 <div
                   style={{
                     display: "flex",
@@ -233,7 +307,9 @@ const TestCaseSection = ({ testResults }) => {
                     alignItems: "center",
                   }}
                 >
-                  <h5 style={{ textAlign: "center" }}>Test Status Breakdown</h5>
+                  <h5 style={{ textAlign: "center" }}>
+                    Test Status Breakdown
+                  </h5>
                   <PieChart width={320} height={320}>
                     <Pie
                       data={result.pieChartData}
@@ -244,9 +320,7 @@ const TestCaseSection = ({ testResults }) => {
                       innerRadius={70}
                       outerRadius={100}
                       labelLine={false}
-                      // Leaves space between slices to reduce collisions
                       paddingAngle={4}
-                      // Custom label that pushes text outside
                       label={renderCustomLabel}
                     >
                       {result.pieChartData.map((entry, idx) => (
@@ -290,11 +364,7 @@ const TestCaseSection = ({ testResults }) => {
                   <h5 style={{ textAlign: "center" }}>
                     Average Test Time (ms)
                   </h5>
-                  <BarChart
-                    width={300}
-                    height={300}
-                    data={result.avgTimeBarData}
-                  >
+                  <BarChart width={300} height={300} data={result.avgTimeBarData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="browser" />
                     <YAxis />
@@ -337,7 +407,9 @@ const TestCaseSection = ({ testResults }) => {
                     const startTime = test.startTime
                       ? new Date(test.startTime)
                       : null;
-                    const endTime = test.endTime ? new Date(test.endTime) : null;
+                    const endTime = test.endTime
+                      ? new Date(test.endTime)
+                      : null;
 
                     let durationSec = "N/A";
                     if (startTime && endTime) {
@@ -348,7 +420,8 @@ const TestCaseSection = ({ testResults }) => {
                       <React.Fragment key={i}>
                         <tr
                           style={{
-                            backgroundColor: i % 2 === 0 ? "#fff" : "#f9f9f9",
+                            backgroundColor:
+                              i % 2 === 0 ? "#fff" : "#f9f9f9",
                             borderBottom: "1px solid #ddd",
                             cursor: "pointer",
                           }}
@@ -415,9 +488,9 @@ const TestCaseSection = ({ testResults }) => {
                                 }}
                               >
                                 {test.steps?.map((step, j) => (
-                                  <li key={j} style={{ marginBottom: "5px" }}>
-                                    <strong>Step {j + 1}:</strong>{" "}
-                                    {step.name}: {step.message} (
+                                  <li key={j} style={{ marginBottom: "8px" }}>
+                                    <strong>Step {j + 1}:</strong> {step.name}:{" "}
+                                    {step.message} (
                                     <span
                                       style={{
                                         color:
@@ -436,6 +509,13 @@ const TestCaseSection = ({ testResults }) => {
                                       Timestamp:{" "}
                                       {new Date(step.timestamp).toLocaleString()}
                                     </small>
+
+                                    {/*
+                                      Show AI button & suggestion ONLY for failing steps
+                                    */}
+                                    {step.status === "fail" && (
+                                      <FailingStepInsight step={step} />
+                                    )}
                                   </li>
                                 ))}
                               </ul>

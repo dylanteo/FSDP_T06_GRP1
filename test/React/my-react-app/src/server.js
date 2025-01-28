@@ -10,6 +10,13 @@ const { MongoClient } = require('mongodb');
 const nodemailer = require('nodemailer');
 require('dotenv').config();
 
+// === OpenAI (new style) ===
+const { OpenAI } = require("openai");
+// Provide your API key
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
 const app = express();
 
 // ==============================
@@ -17,14 +24,10 @@ const app = express();
 // ==============================
 const fsPromises = fs.promises;
 
-/**
- * Count test cases by browser from a given Java file with a @DataProvider.
- */
 async function countTestCasesByBrowser(filePath) {
   try {
     const content = await fsPromises.readFile(filePath, "utf8");
 
-    // Regex to find the @DataProvider block (handles multiline content)
     const dataProviderRegex =
       /@DataProvider\s*\(.*?\)\s*public\s*Object\[\]\[\]\s*\w+\s*\(\)\s*\{([\s\S]*?)\};/;
     const match = content.match(dataProviderRegex);
@@ -32,7 +35,6 @@ async function countTestCasesByBrowser(filePath) {
     if (match) {
       const dataProviderContent = match[1];
 
-      // Regex to find all test cases within the 2D array
       const testCaseRegex = /\{["'](chrome|firefox|edge)["'],/g;
       const browserCounts = { chrome: 0, firefox: 0, edge: 0 };
 
@@ -54,17 +56,10 @@ async function countTestCasesByBrowser(filePath) {
   }
 }
 
-/**
- * Calculate how many replicas are needed based on the number of test cases.
- * Example: 1 replica per 3 tests, rounded up.
- */
 function calculateReplicas(testCount) {
   return Math.ceil(testCount / 3);
 }
 
-/**
- * Update the 'replicas:' field in a Kubernetes deployment YAML file.
- */
 async function updateKubernetesDeployment(deploymentFilePath, replicas) {
   try {
     const deploymentContent = await fsPromises.readFile(deploymentFilePath, "utf8");
@@ -80,9 +75,6 @@ async function updateKubernetesDeployment(deploymentFilePath, replicas) {
   }
 }
 
-/**
- * Apply a Kubernetes deployment using kubectl.
- */
 function applyKubernetesDeployment(deploymentFilePath) {
   return new Promise((resolve, reject) => {
     exec(`kubectl apply -f ${deploymentFilePath}`, (error, stdout, stderr) => {
@@ -99,12 +91,12 @@ function applyKubernetesDeployment(deploymentFilePath) {
 // End of TestCounter logic
 // ==============================
 
-
+// Setup Nodemailer
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false,  // use SSL
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
@@ -122,21 +114,20 @@ transporter.verify(function(error, success) {
   }
 });
 
-// CORS configuration
+// Basic CORS setup
 app.use(cors({
   origin: 'http://localhost:3000',
   methods: ['POST', 'GET'],
   allowedHeaders: ['Content-Type']
 }));
 
-// MongoDB setup
+// MongoDB connect
 const mongoUri = process.env.MONGO_URI;
 const client = new MongoClient(mongoUri, { useNewUrlParser: true, useUnifiedTopology: true });
 const dbName = 'TestCaseOutput1';
 const collectionName = 'testCaseOutputs';
 let db;
 
-// Connect to MongoDB
 client.connect()
   .then(() => {
     db = client.db(dbName);
@@ -146,7 +137,7 @@ client.connect()
     console.error('Error connecting to MongoDB:', err);
   });
 
-// Fetch test results from MongoDB
+// Endpoint to fetch test results from MongoDB
 app.get('/api/testResults', async (req, res) => {
   if (!db) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -164,10 +155,9 @@ app.get('/api/testResults', async (req, res) => {
   }
 });
 
-// Serve static files from the test-output directory
+// Serve HTML reports
 app.use('/reports', express.static(path.join(__dirname, '..', '..', '..', 'test', 'test-output')));
 
-// Add endpoint to get the latest report
 app.get('/api/latest-report', (req, res) => {
   const reportsDir = path.join(__dirname, '..', '..', '..', 'test', 'test-output');
   try {
@@ -197,16 +187,15 @@ app.get('/api/latest-report', (req, res) => {
   }
 });
 
-// Upload directory setup
+// Setup directories
 const uploadDir = path.join(__dirname, '..', '..', '..', 'test', 'src', 'main', 'java', 'com', 'test', 'test');
-
-// Ensure test-output directory exists
 const testOutputDir = path.join(__dirname, '..', '..', '..', 'test', 'test-output');
+
 if (!fs.existsSync(testOutputDir)) {
   fs.mkdirSync(testOutputDir, { recursive: true });
 }
 
-// File upload middleware setup
+// Multer setup
 const multerStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     if (!fs.existsSync(uploadDir)) {
@@ -239,13 +228,11 @@ const upload = multer({
     }
   },
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024
   }
 });
 
-/**
- * Helper to read JSON test report from a known location.
- */
+// Helper functions
 async function readJSONReport(repoRoot) {
   return new Promise((resolve, reject) => {
     const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
@@ -253,8 +240,7 @@ async function readJSONReport(repoRoot) {
     fs.readFile(reportPath, 'utf8', (err, data) => {
       if (err) {
         console.error(`Failed to read JSON report at path: ${reportPath}`);
-        reject(new Error(`Failed to read JSON report: ${err.message}`));
-        return;
+        return reject(new Error(`Failed to read JSON report: ${err.message}`));
       }
       try {
         const jsonContent = JSON.parse(data);
@@ -266,9 +252,6 @@ async function readJSONReport(repoRoot) {
   });
 }
 
-/**
- * Helper to send the test report via email.
- */
 async function sendReportEmail(recipientEmail, reportContent, filename) {
   const mailOptions = {
     from: process.env.EMAIL_USER,
@@ -297,13 +280,11 @@ async function sendReportEmail(recipientEmail, reportContent, filename) {
   }
 }
 
-/**
- * Compile and run Java file with Maven (clean compile + exec:java).
- */
-async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
+function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
   return new Promise((resolve, reject) => {
     const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
     const projectDir = path.join(__dirname, '..', '..', '..', 'test');
+
     exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
         return reject(new Error(`Compilation failed: ${compileStderr}`));
@@ -325,13 +306,11 @@ async function compileAndRunJavaFileWithMaven(testFilePath, testClassName) {
   });
 }
 
-/**
- * Only compile (no run).
- */
-async function compileJavaFileWithMaven(testFilePath) {
+function compileJavaFileWithMaven(testFilePath) {
   return new Promise((resolve, reject) => {
     const mvnCommand = process.platform === 'win32' ? 'mvnw.cmd' : './mvnw';
     const projectDir = path.join(__dirname, '..', '..', '..', 'test');
+
     exec(`${mvnCommand} clean compile`, { cwd: projectDir }, (compileError, compileStdout, compileStderr) => {
       if (compileError) {
         return reject(new Error(`Compilation failed: ${compileStderr}`));
@@ -344,9 +323,6 @@ async function compileJavaFileWithMaven(testFilePath) {
   });
 }
 
-/**
- * Save the Java file contents to the MongoDB.
- */
 async function saveJavaFileToDB(file, fileContent) {
   const javaFilesCollection = db.collection('javaTestCodes');
   const javaFileDocument = {
@@ -363,9 +339,6 @@ async function saveJavaFileToDB(file, fileContent) {
   return javaFilesCollection.insertOne(javaFileDocument);
 }
 
-/**
- * Save JSON test report to MongoDB.
- */
 async function saveJSONReportToDB(reportContent) {
   const reportsCollection = db.collection('JSONREPORTS');
   const currentDate = new Date();
@@ -376,9 +349,6 @@ async function saveJSONReportToDB(reportContent) {
   return reportsCollection.insertOne(reportDocument);
 }
 
-/**
- * Save the test report (HTML) to MongoDB.
- */
 async function saveTestReportToDB(reportContent, javaFile) {
   const reportsCollection = db.collection('testReports');
   const reportDocument = {
@@ -408,16 +378,15 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   const repoRoot = path.join(__dirname, '..', '..', '..', '..');
 
   try {
-    // 1. Compile and run the Java file with Maven
+    // 1. Compile and run
     console.log('Compiling and running test with Maven...');
-    const result = await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+    await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
 
-    // 2. Now count the test cases by browser from the uploaded file
+    // 2. Count test cases
     const browserCounts = await countTestCasesByBrowser(uploadedFilePath);
     console.log(`Test case counts by browser: ${JSON.stringify(browserCounts, null, 2)}`);
 
-    // 3. Update and apply the Kubernetes deployments based on test counts
-    // Adjust the directory if your YAML files are elsewhere
+    // 3. Update & apply K8s
     const deploymentDir = path.join(__dirname, '..', '..', '..');
     const deploymentPaths = {
       chrome: path.join(deploymentDir, "selenium-node-chrome-deployment.yaml"),
@@ -437,21 +406,19 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
         console.log(`No test cases for ${browser}. Deployment not updated.`);
       }
     });
-
     await Promise.all(updateAndApplyPromises);
 
-    // 4. Read JSON report (wait until the file is created)
+    // 4. Read JSON report
     const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
     const reportDir = path.dirname(reportPath);
     if (!fs.existsSync(reportDir)) {
       fs.mkdirSync(reportDir, { recursive: true });
     }
 
-    // Wait up to 20 seconds for the file to exist
     let attempts = 0;
     const maxAttempts = 20;
     while (!fs.existsSync(reportPath) && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+      await new Promise(resolve => setTimeout(resolve, 1000));
       attempts++;
     }
 
@@ -461,11 +428,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     const reportContent = fs.readFileSync(reportPath, 'utf8');
 
-    // 5. Save JSON report to DB and send email
+    // 5. Save JSON report to DB & send email
     await saveJSONReportToDB(reportContent);
     await sendReportEmail(recipientEmail, reportContent, req.file.originalname);
 
-    // 6. Clean up the uploaded .java file if desired
+    // 6. Clean up
     fs.unlinkSync(uploadedFilePath);
 
     res.json({
@@ -496,38 +463,27 @@ app.post('/api/upload-code', upload.single('file'), async (req, res) => {
   const uploadedFilePath = path.join(uploadDir, req.file.filename);
 
   try {
-    // Step 1: Attempt to compile the Java file
+    // 1: Compile only
     console.log('Compiling Java file...');
     await compileJavaFileWithMaven(uploadedFilePath);
 
-    // Step 2: If compilation is successful, read the file content
+    // 2: Read & save
     const fileContent = fs.readFileSync(uploadedFilePath, 'utf8');
+    const result = await saveJavaFileToDB(req.file, fileContent);
 
-    // Step 3: Save to database
-    const codeDocument = {
-      filename: req.file.originalname,
-      content: fileContent,
-      uploadDate: new Date(),
-      size: req.file.size,
-      compilationStatus: 'success'
-    };
-     const result = await saveJavaFileToDB(req.file, fileContent);
-    //const result = await db.collection('javaTestCodes').insertOne(codeDocument);
-
-    // Step 4: Clean up the uploaded file
+    // 3: Cleanup
     fs.unlinkSync(uploadedFilePath);
 
     res.json({
       success: true,
       fileId: result.insertedId,
-      filename: codeDocument.filename,
+      filename: req.file.originalname,
       message: 'File compiled successfully and saved to database'
     });
 
   } catch (err) {
     console.error('Compilation or upload error:', err);
 
-    // Clean up the uploaded file in case of error
     if (fs.existsSync(uploadedFilePath)) {
       fs.unlinkSync(uploadedFilePath);
     }
@@ -539,7 +495,47 @@ app.post('/api/upload-code', upload.single('file'), async (req, res) => {
   }
 });
 
-// Error handling middleware
+// === OpenAI (new style) Endpoint ===
+app.use(express.json()); // parse JSON body
+app.post('/api/ai-insights', async (req, res) => {
+  try {
+    const { errorMessage } = req.body;
+    if (!errorMessage) {
+      return res.status(400).json({ error: 'Missing errorMessage in request body.' });
+    }
+
+    // Build a short prompt
+    const prompt = `
+      The following Selenium test step failed with this error message:
+      "${errorMessage}"
+
+      Provide a short explanation and possible solutions:
+    `;
+
+    // Notice we're now using openai.chat.completions.create
+    const response = await openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'user', content: prompt }
+      ],
+      max_tokens: 200,
+      temperature: 0.7
+    });
+
+    // Extract the AI answer
+    const aiAnswer = response.choices?.[0]?.message?.content || '';
+    res.json({ insight: aiAnswer });
+
+  } catch (error) {
+    console.error('Error calling OpenAI API:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve AI insight',
+      details: error.message
+    });
+  }
+});
+
+// Global error handler for Multer or other issues
 app.use((err, req, res, next) => {
   console.error('Error:', err);
   if (err instanceof multer.MulterError) {
@@ -551,6 +547,7 @@ app.use((err, req, res, next) => {
   return res.status(500).json({ error: 'Server error: ' + err.message });
 });
 
+// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
@@ -559,8 +556,6 @@ app.listen(PORT, () => {
 // ===========================================
 // Additional endpoints for DB data retrieval
 // ===========================================
-
-// Fetch all Java code from MongoDB
 app.get('/api/all-java-code', async (req, res) => {
   if (!db) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -578,7 +573,6 @@ app.get('/api/all-java-code', async (req, res) => {
   }
 });
 
-// Fetch all reports from MongoDB
 app.get('/api/all-reports', async (req, res) => {
   if (!db) {
     return res.status(500).json({ error: 'Database not connected' });
@@ -596,7 +590,6 @@ app.get('/api/all-reports', async (req, res) => {
   }
 });
 
-// Fetch JSON reports from MongoDB
 app.get('/api/json-reports', async (req, res) => {
   if (!db) {
     return res.status(500).json({ error: 'Database not connected' });
