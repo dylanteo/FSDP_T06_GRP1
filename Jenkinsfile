@@ -6,6 +6,8 @@ pipeline {
         APP_DIR = 'test/React/my-react-app'
         K8S_NAMESPACE = 'default'
         DEPLOYMENT_FILES = "test/selenium-hub.yaml,test/selenium-hub-service.yaml,test/selenium-node-chrome-deployment.yaml,test/selenium-node-edge-deployment.yaml,test/selenium-node-firefox-deployment.yaml"
+        TEST_DIR = 'test/test'
+        HUB_HEALTH_CHECK = "http://localhost:4444/wd/hub/status"
     }
 
     stages {
@@ -16,11 +18,49 @@ pipeline {
         }
 
         stage('Install Dependencies') {
+            parallel {
+                stage('React Dependencies') {
+                    steps {
+                        dir(APP_DIR) {
+                            bat 'npm install'
+                        }
+                    }
+                }
+                stage('Java Dependencies') {
+                    steps {
+                        dir(TEST_DIR) {
+                            bat 'mvn clean install -DskipTests'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Selenium Grid') {
             steps {
                 script {
-                    dir(APP_DIR) {
-                        bat 'npm install'
-                    }
+                    // Apply Selenium Hub first
+                    bat "kubectl apply -f test/selenium-hub.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl apply -f test/selenium-hub-service.yaml --namespace=${K8S_NAMESPACE}"
+
+                    // Wait for Hub to be ready
+                    bat "kubectl wait --for=condition=ready pod -l app=selenium-hub --timeout=120s --namespace=${K8S_NAMESPACE}"
+
+                    // Deploy browser nodes
+                    bat "kubectl apply -f test/selenium-node-chrome-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl apply -f test/selenium-node-edge-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl apply -f test/selenium-node-firefox-deployment.yaml --namespace=${K8S_NAMESPACE}"
+
+                    // Wait for all nodes to be ready
+                    bat "kubectl wait --for=condition=ready pod -l browser=chrome --timeout=120s --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl wait --for=condition=ready pod -l browser=firefox --timeout=120s --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl wait --for=condition=ready pod -l browser=edge --timeout=120s --namespace=${K8S_NAMESPACE}"
+
+                    // Port forward Selenium Hub
+                    bat "start /B kubectl port-forward service/selenium-hub 4444:4444 --namespace=${K8S_NAMESPACE}"
+
+                    // Wait for Hub to be accessible
+                    sleep(30)
                 }
             }
         }
@@ -28,48 +68,66 @@ pipeline {
         stage('Start React Development Server') {
             steps {
                 script {
-                    // Start the React app locally without deploying to Kubernetes
                     dir(APP_DIR) {
                         bat 'start /B npm run dev'
-                        sleep 5 // Wait a bit for the server to start
+                        sleep 15 // Wait for server to start
                     }
                 }
             }
         }
 
-        stage('Deploy Selenium Hub and Nodes') {
+        stage('Run Tests') {
             steps {
                 script {
-                    // Apply all Kubernetes deployment YAML files for Selenium
-                    DEPLOYMENT_FILES.split(',').each { file ->
-                        bat "kubectl apply -f ${file} --namespace=${K8S_NAMESPACE} --validate=false"
-                    }
+                    parallel(
+                        chrome: {
+                            dir(TEST_DIR) {
+                                bat 'mvn test -Dtest=OpenYouTubeTestChrome -Dbrowser=chrome'
+                            }
+                        },
+                        firefox: {
+                            dir(TEST_DIR) {
+                                bat 'mvn test -Dtest=OpenYouTubeTestFirefox -Dbrowser=firefox'
+                            }
+                        },
+                        edge: {
+                            dir(TEST_DIR) {
+                                bat 'mvn test -Dtest=OpenYouTubeTestEdge -Dbrowser=edge'
+                            }
+                        },
+                        failFast: true
+                    )
                 }
             }
         }
     }
 
     post {
-        success {
-            echo 'Development server started and Selenium Hub and Nodes deployed successfully.'
-        }
-        failure {
-            echo 'Failed to start development server or deploy Selenium Hub/nodes.'
-        }
         always {
             script {
                 try {
-                    // Clean up by stopping the React development server, check if node.exe is running
-                    def processList = bat(script: 'tasklist /FI "IMAGENAME eq node.exe"', returnStdout: true).trim()
-                    if (processList.contains('node.exe')) {
-                        bat 'taskkill /F /IM node.exe'
-                    } else {
-                        echo 'No Node.js process found to kill.'
-                    }
+                    // Stop the React development server
+                    bat 'taskkill /F /IM node.exe'
                 } catch (Exception e) {
-                    echo "Error during cleanup: ${e.getMessage()}"
+                    echo "Error stopping React server: ${e.getMessage()}"
+                }
+
+                try {
+                    // Kill port-forward process
+                    bat 'for /f "tokens=5" %a in (\'netstat -aon ^| find "4444"\') do taskkill /F /PID %a'
+
+                    // Clean up Kubernetes resources
+                    bat "kubectl delete -f test/selenium-hub.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-hub-service.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-node-chrome-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-node-edge-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-node-firefox-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                } catch (Exception e) {
+                    echo "Error cleaning up Kubernetes resources: ${e.getMessage()}"
                 }
             }
+
+            junit '**/target/surefire-reports/*.xml'
         }
     }
 }
