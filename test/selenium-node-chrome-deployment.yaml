@@ -31,7 +31,3 @@ spec:
               value: "3"
             - name: SE_NODE_OVERRIDE_MAX_SESSIONS
               value: "true"
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/bin/sh", "-c", "echo Starting teardown timer && sleep 180 && kill 1"]
