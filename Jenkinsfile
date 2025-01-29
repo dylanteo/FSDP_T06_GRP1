@@ -81,13 +81,13 @@ pipeline {
                 script {
                     parallel(
                         chrome: {
-                            bat 'mvn test -Dtest=com.test.test.OpenYouTubeTestChrome -Dbrowser=chrome'
+                            bat 'mvn exec:java -Dexec.mainClass="com.test.test.OpenYouTubeTestChrome" -Dbrowser=chrome'
                         },
                         firefox: {
-                            bat 'mvn test -Dtest=com.test.test.OpenYouTubeTestFirefox -Dbrowser=firefox'
+                            bat 'mvn exec:java -Dexec.mainClass="com.test.test.OpenYouTubeTestFirefox" -Dbrowser=firefox'
                         },
                         edge: {
-                            bat 'mvn test -Dtest=com.test.test.OpenYouTubeTestEdge -Dbrowser=edge'
+                            bat 'mvn exec:java -Dexec.mainClass="com.test.test.OpenYouTubeTestEdge" -Dbrowser=edge'
                         },
                         failFast: true
                     )
