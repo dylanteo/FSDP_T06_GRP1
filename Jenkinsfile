@@ -54,7 +54,7 @@ pipeline {
                     // Wait for all nodes to be ready
                     bat "kubectl wait --for=condition=ready pod -l app=selenium-node-chrome --timeout=120s --namespace=${K8S_NAMESPACE}"
                     bat "kubectl wait --for=condition=ready pod -l app=selenium-node-edge --timeout=120s --namespace=${K8S_NAMESPACE}"
-                    bat "kubectl wait --for=condition=ready pod -l app=selenium-firefox- --timeout=120s --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl wait --for=condition=ready pod -l app=selenium-firefox --timeout=120s --namespace=${K8S_NAMESPACE}"
 
                     // Port forward Selenium Hub
                     bat "start /B kubectl port-forward service/selenium-hub 4444:4444 --namespace=${K8S_NAMESPACE}"
