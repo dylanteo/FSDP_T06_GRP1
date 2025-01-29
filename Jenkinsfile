@@ -81,19 +81,13 @@ pipeline {
                 script {
                     parallel(
                         chrome: {
-                            dir(TEST_DIR) {
-                                bat 'mvn test -Dtest=OpenYouTubeTestChrome -Dbrowser=chrome'
-                            }
+                            bat 'mvn test -Dtest=com.test.test.OpenYouTubeTestChrome -Dbrowser=chrome'
                         },
                         firefox: {
-                            dir(TEST_DIR) {
-                                bat 'mvn test -Dtest=OpenYouTubeTestFirefox -Dbrowser=firefox'
-                            }
+                            bat 'mvn test -Dtest=com.test.test.OpenYouTubeTestFirefox -Dbrowser=firefox'
                         },
                         edge: {
-                            dir(TEST_DIR) {
-                                bat 'mvn test -Dtest=OpenYouTubeTestEdge -Dbrowser=edge'
-                            }
+                            bat 'mvn test -Dtest=com.test.test.OpenYouTubeTestEdge -Dbrowser=edge'
                         },
                         failFast: true
                     )
