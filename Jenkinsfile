@@ -126,8 +126,6 @@ pipeline {
                     echo "Error cleaning up Kubernetes resources: ${e.getMessage()}"
                 }
             }
-
-            junit '**/target/surefire-reports/*.xml'
         }
     }
 }
