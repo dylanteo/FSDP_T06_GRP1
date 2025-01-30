@@ -1,14 +1,39 @@
 import React, { useState } from 'react';
+import ScheduleManager from './ScheduleManager';
 
 const CodeTable = ({ javaCode }) => {
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  // ---------------------------
+  // States
+  // ---------------------------
   const [runningStatus, setRunningStatus] = useState({});
   const [selectedFiles, setSelectedFiles] = useState(new Set());
   const [isExecuting, setIsExecuting] = useState(false);
   const [scheduledTimes, setScheduledTimes] = useState({});
-  const [showScheduler, setShowScheduler] = useState(false);
   const [selectedDateTime, setSelectedDateTime] = useState('');
+  const [showScheduleManager, setShowScheduleManager] = useState(false);
 
+  // Filter input state
+  const [filterText, setFilterText] = useState('');
+
+  // Run mode -> "immediate" or "scheduled"
+  const [runMode, setRunMode] = useState('immediate');
+
+  // Code snippet modal
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [modalCodeContent, setModalCodeContent] = useState('');
+
+  // Confirmation modal
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalFiles, setConfirmModalFiles] = useState([]);
+  const [confirmModalAction, setConfirmModalAction] = useState('run');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // ---------------------------
+  // Utility Functions
+  // ---------------------------
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const options = {
@@ -21,25 +46,23 @@ const CodeTable = ({ javaCode }) => {
       second: '2-digit',
       hour12: false,
     };
-    const formattedDate = new Intl.DateTimeFormat('en-SG', options).format(date);
-    return formattedDate.replace(',', '');
+    return new Intl.DateTimeFormat('en-SG', options).format(date).replace(',', '');
   };
 
   const handleSeeMoreClick = (fileContent) => {
-    const newWindow = window.open();
-    newWindow.document.write('<pre>' + fileContent + '</pre>');
-    newWindow.document.close();
+    setModalCodeContent(fileContent);
+    setShowCodeModal(true);
   };
 
+  // ---------------------------
+  // Running Code Logic
+  // ---------------------------
   const handleRunCode = async (filename, scheduledTime = null) => {
     if (scheduledTime) {
-      // If there's a scheduled time, store it
-      setScheduledTimes(prev => ({ ...prev, [filename]: scheduledTime }));
-      setRunningStatus(prev => ({ ...prev, [filename]: 'scheduled' }));
+      setScheduledTimes((prev) => ({ ...prev, [filename]: scheduledTime }));
+      setRunningStatus((prev) => ({ ...prev, [filename]: 'scheduled' }));
 
-      // Calculate delay until scheduled time
       const delay = new Date(scheduledTime) - new Date();
-
       if (delay > 0) {
         setTimeout(() => {
           executeCode(filename);
@@ -52,202 +75,347 @@ const CodeTable = ({ javaCode }) => {
   };
 
   const executeCode = async (filename) => {
-    setRunningStatus(prev => ({ ...prev, [filename]: 'running' }));
+    setRunningStatus((prev) => ({ ...prev, [filename]: 'running' }));
 
     try {
+      const fileObj = javaCode.find((f) => f.filename === filename);
+      const blob = new Blob([fileObj.content], { type: 'text/x-java' });
+
       const formData = new FormData();
-      const blob = new Blob([javaCode.find(file => file.filename === filename).content],
-        { type: 'text/x-java' });
       formData.append('file', blob, filename);
 
-      // Add email to form data
-      const userEmail = localStorage.getItem('userEmail') || prompt('Please enter your email address:');
+      // Prompt for email if not in localStorage
+      const userEmail =
+        localStorage.getItem('userEmail') ||
+        prompt('Please enter your email address:');
       if (!userEmail) {
         throw new Error('Email is required');
       }
-      localStorage.setItem('userEmail', userEmail); // Save for future use
+      localStorage.setItem('userEmail', userEmail);
       formData.append('email', userEmail);
 
       const response = await fetch('http://localhost:5000/api/upload', {
         method: 'POST',
         body: formData,
       });
-
       if (!response.ok) {
         throw new Error('Failed to run code');
       }
 
-      const result = await response.json();
-      setRunningStatus(prev => ({ ...prev, [filename]: 'completed' }));
-      // Clear scheduled time after completion
-      setScheduledTimes(prev => {
+      await response.json();
+      setRunningStatus((prev) => ({ ...prev, [filename]: 'completed' }));
+
+      // Clear scheduled time
+      setScheduledTimes((prev) => {
         const newTimes = { ...prev };
         delete newTimes[filename];
         return newTimes;
       });
-
     } catch (error) {
       console.error('Error running code:', error);
-      setRunningStatus(prev => ({ ...prev, [filename]: 'error' }));
+      setRunningStatus((prev) => ({ ...prev, [filename]: 'error' }));
       throw error;
     }
   };
 
-  const handleRunSelected = async () => {
-    if (!selectedDateTime && showScheduler) {
-      alert('Please select a date and time for scheduled execution');
+  // ---------------------------
+  // Confirmation Modal Flow
+  // ---------------------------
+  const handleAttemptRunSelected = () => {
+    if (runMode === 'scheduled' && !selectedDateTime) {
+      alert('Please select a date/time to schedule');
       return;
     }
 
+    const filesArray = Array.from(selectedFiles);
+    if (filesArray.length === 0) return;
+
+    setConfirmModalFiles(filesArray);
+    setConfirmModalAction(runMode === 'scheduled' ? 'schedule' : 'run');
+    setShowConfirmModal(true);
+  };
+
+  const confirmRunSelected = async () => {
+    setShowConfirmModal(false);
     setIsExecuting(true);
-    const selectedFilesArray = Array.from(selectedFiles);
 
-    for (const filename of selectedFilesArray) {
-      try {
-        await handleRunCode(filename, showScheduler ? selectedDateTime : null);
-      } catch (error) {
-        alert(`Error running ${filename}: ${error.message}`);
-        break;
+    try {
+      for (const filename of confirmModalFiles) {
+        await handleRunCode(
+          filename,
+          confirmModalAction === 'schedule' ? selectedDateTime : null
+        );
       }
-    }
 
-    setIsExecuting(false);
-    if (!showScheduler) {
-      alert('Finished executing selected files');
-    } else {
-      alert(`Files scheduled for execution at ${formatDate(selectedDateTime)}`);
+      setIsExecuting(false);
+      if (confirmModalAction === 'run') {
+        alert('Finished executing selected files');
+      } else {
+        alert(`Files scheduled for execution at ${formatDate(selectedDateTime)}`);
+      }
+    } catch (err) {
+      alert(`Error running files: ${err.message}`);
+      setIsExecuting(false);
     }
   };
 
+  // ---------------------------
+  // Selection & Status
+  // ---------------------------
   const toggleFileSelection = (filename) => {
-    const newSelected = new Set(selectedFiles);
-    if (newSelected.has(filename)) {
-      newSelected.delete(filename);
+    const newSet = new Set(selectedFiles);
+    if (newSet.has(filename)) {
+      newSet.delete(filename);
     } else {
-      newSelected.add(filename);
+      newSet.add(filename);
     }
-    setSelectedFiles(newSelected);
+    setSelectedFiles(newSet);
   };
 
-  const getStatusButton = (filename) => {
+  const getStatusBadge = (filename) => {
     const status = runningStatus[filename];
-    const baseButtonClass = "px-3 py-1 rounded text-white";
-
     switch (status) {
       case 'scheduled':
         return (
-          <span className={`${baseButtonClass} bg-blue-500`}>
+          <span className="status-badge scheduled">
             Scheduled for {formatDate(scheduledTimes[filename])}
           </span>
         );
       case 'running':
-        return (
-          <span className={`${baseButtonClass} bg-yellow-500`}>
-            Running...
-          </span>
-        );
+        return <span className="status-badge running">Running...</span>;
       case 'completed':
-        return (
-          <span className={`${baseButtonClass} bg-green-500`}>
-            Completed
-          </span>
-        );
+        return <span className="status-badge completed">Completed</span>;
       case 'error':
-        return (
-          <span className={`${baseButtonClass} bg-red-500`}>
-            Error
-          </span>
-        );
+        return <span className="status-badge error">Error</span>;
       default:
         return null;
     }
   };
 
+  // ---------------------------
+  // Sort, Filter & Pagination
+  // ---------------------------
+
+  // 1) Sort by date (descending) so latest is on top
+  const sortedByDate = [...javaCode].sort(
+    (a, b) => new Date(b.uploadDate) - new Date(a.uploadDate)
+  );
+
+  // 2) Filtered list
+  const filteredCode = sortedByDate.filter((file) => {
+    if (!filterText) return true;
+    return file.filename.toLowerCase().includes(filterText.toLowerCase());
+  });
+
+  // 3) Pagination
+  const totalPages = Math.ceil(filteredCode.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentPageItems = filteredCode.slice(startIndex, endIndex);
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // ---------------------------
+  // Render
+  // ---------------------------
   return (
-    <div className="test-results">
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-xl font-bold">Java Code Files</h3>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={showScheduler}
-                onChange={(e) => setShowScheduler(e.target.checked)}
-                id="scheduler-toggle"
-                className="w-4 h-4"
-              />
-              <label htmlFor="scheduler-toggle">Schedule Run</label>
-            </div>
-            {showScheduler && (
-              <input
-                type="datetime-local"
-                value={selectedDateTime}
-                onChange={(e) => setSelectedDateTime(e.target.value)}
-                className="border rounded px-2 py-1"
-                min={new Date().toISOString().slice(0, 16)}
-              />
-            )}
-            <button
-              onClick={handleRunSelected}
-              disabled={selectedFiles.size === 0 || isExecuting}
-              className={`run-selected-btn ${
-                selectedFiles.size === 0 || isExecuting ? 'cursor-not-allowed' : ''
-              }`}
-            >
-              {isExecuting ? 'Executing...' : showScheduler ? 'Schedule Selected' : `Run Selected (${selectedFiles.size})`}
-            </button>
-          </div>
+    <div className="enhanced-code-table-container">
+      {/* Top row: Title & Filter */}
+      <div className="top-row">
+        <h3 className="table-title">Java Code Files</h3>
+
+        <div className="filter-container">
+          <label>Filter by Test Case Type:</label>
+          <input
+            type="text"
+            placeholder="e.g. 'login', 'register'..."
+            value={filterText}
+            onChange={(e) => {
+              setFilterText(e.target.value);
+              setCurrentPage(1); // reset to first page on new filter
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Run Mode + DateTime */}
+      <div className="run-mode-row">
+        <div className="run-mode-options">
+          <label>
+            <input
+              type="radio"
+              name="runMode"
+              value="immediate"
+              checked={runMode === 'immediate'}
+              onChange={() => setRunMode('immediate')}
+            />
+            Run Now
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="runMode"
+              value="scheduled"
+              checked={runMode === 'scheduled'}
+              onChange={() => setRunMode('scheduled')}
+            />
+            Schedule
+          </label>
+          {runMode === 'scheduled' && (
+            <input
+              type="datetime-local"
+              value={selectedDateTime}
+              onChange={(e) => setSelectedDateTime(e.target.value)}
+              className="datetime-input"
+              style={{ marginLeft: '8px' }}
+            />
+          )}
         </div>
 
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 text-left">Select</th>
-              <th className="p-2 text-left">File Name</th>
-              <th className="p-2 text-left">Code</th>
-              <th className="p-2 text-left">Date Uploaded</th>
-              <th className="p-2 text-left">Status</th>
+        <button
+          className="run-selected-btn"
+          disabled={selectedFiles.size === 0 || isExecuting}
+          onClick={handleAttemptRunSelected}
+        >
+          {isExecuting
+            ? 'Executing...'
+            : runMode === 'scheduled'
+            ? `Schedule Selected (${selectedFiles.size})`
+            : `Run Selected (${selectedFiles.size})`}
+        </button>
+        <button
+          className="button button-secondary"
+          disabled={selectedFiles.size === 0}
+          onClick={() => setShowScheduleManager(true)}
+        >
+          Schedule Selected
+        </button>
+      </div>
+
+      {/* Table Container */}
+      <div className="table-scroll-container tall-container" style={{ minHeight: '800px' }}>
+        <table className="enhanced-code-table">
+          <thead className="sticky-header">
+            <tr>
+              <th>Select</th>
+              <th>File Name</th>
+              <th>Code</th>
+              <th>Date Uploaded</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {javaCode.map((file, index) => (
-              <tr key={index} className="border-b">
-                <td className="p-2">
-                  <input
-                    type="checkbox"
-                    checked={selectedFiles.has(file.filename)}
-                    onChange={() => toggleFileSelection(file.filename)}
-                    disabled={isExecuting}
-                    className="w-4 h-4"
-                  />
-                </td>
-                <td className="p-2">{file.filename}</td>
-                <td className="p-2">
-                  <pre className="bg-gray-50 p-2 rounded">
-                    {file.content.substring(0, 100) + '...'}
-                  </pre>
-                  {file.content.length > 100 && (
-                    <button
-                      className="text-blue-600 hover:text-blue-800 mt-2"
-                      onClick={() => handleSeeMoreClick(file.content)}
-                    >
-                      See More
-                    </button>
-                  )}
-                </td>
-                <td className="p-2">{formatDate(file.uploadDate)}</td>
-                <td className="p-2">
-                  {getStatusButton(file.filename)}
-                </td>
-              </tr>
-            ))}
+            {currentPageItems.map((file, index) => {
+              const isSelected = selectedFiles.has(file.filename);
+              return (
+                <tr
+                  key={index}
+                  className={isSelected ? 'selected-row table-row' : 'table-row'}
+                >
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleFileSelection(file.filename)}
+                      disabled={isExecuting}
+                    />
+                  </td>
+                  <td className="file-name-cell">{file.filename}</td>
+                  <td>
+                    <pre className="code-snippet">
+                      {file.content.substring(0, 100)}...
+                    </pre>
+                    {file.content.length > 100 && (
+                      <button
+                        className="see-more-btn"
+                        onClick={() => handleSeeMoreClick(file.content)}
+                      >
+                        See More
+                      </button>
+                    )}
+                  </td>
+                  <td>{formatDate(file.uploadDate)}</td>
+                  <td>{getStatusBadge(file.filename)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="pagination-controls">
+          <button onClick={handlePrevPage} disabled={currentPage === 1}>
+            Prev
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button onClick={handleNextPage} disabled={currentPage === totalPages}>
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Modal for Full Code */}
+      {showCodeModal && (
+        <div className="code-modal-overlay">
+          <div className="code-modal-content">
+            <h2>Full Code</h2>
+            <pre>{modalCodeContent}</pre>
+            <button
+              className="close-modal-btn"
+              onClick={() => setShowCodeModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="run-confirm-modal-overlay">
+          <div className="run-confirm-modal-content">
+            <h2>{confirmModalAction === 'run' ? 'Confirm Run' : 'Confirm Schedule'}</h2>
+            <p>You are about to {confirmModalAction} the following files:</p>
+            <ul>
+              {confirmModalFiles.map((fname, i) => (
+                <li key={i}>{fname}</li>
+              ))}
+            </ul>
+            {confirmModalAction === 'schedule' && (
+              <p>
+                <strong>Scheduled Time: </strong>
+                {selectedDateTime}
+              </p>
+            )}
+            <div className="confirm-modal-buttons">
+              <button onClick={() => setShowConfirmModal(false)}>Cancel</button>
+              <button onClick={confirmRunSelected}>OK</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showScheduleManager && (
+        <ScheduleManager
+          selectedFiles={Array.from(selectedFiles)}
+          onClose={() => setShowScheduleManager(false)}
+        />
+      )}
     </div>
   );
 };
 
 export default CodeTable;
-//test

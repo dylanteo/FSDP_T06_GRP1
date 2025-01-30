@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, Navigate, useNavigate } from 'react-router-dom';
 import TestResultsTable from './components/TestResultsTable';
 import CodeTable from './components/CodeTable';
 import ReportTable from './components/ReportTable';
 import TestAnalytics from './components/TestAnalytics';
 import TestCaseStatistics from './components/TestCaseStatistics';
 import './css/App.css';
+
+// Import Auth Components
+import { AuthProvider, useAuth } from './AuthContext';
+import Login from './components/Login';
+import Register from './components/Register';
 
 // Analytics Page Component
 const AnalyticsPage = ({ testResults }) => (
@@ -18,7 +23,7 @@ const AnalyticsPage = ({ testResults }) => (
 // Code Page Component
 const CodePage = ({ javaCode, handleJavaFileChange, handleUploadButtonClick, uploadStatus }) => (
   <div className="page-container">
-    <h2>Code Repository</h2>
+    <h2>TestCase Bank</h2>
     <div className="controls">
       <button
         className="btn create-btn"
@@ -48,7 +53,6 @@ const CodePage = ({ javaCode, handleJavaFileChange, handleUploadButtonClick, upl
 const ResultsPage = ({ testResults, reports }) => (
   <div className="page-container">
     <h2>Test Results</h2>
-    {/*<TestResultsTable testResults={testResults} />*/}
     <ReportTable reports={reports} />
   </div>
 );
@@ -68,20 +72,16 @@ function parseHTMLContent(htmlContent) {
 
   // Extract the test items
   const testItems = [];
-
   const testItemElements = doc.querySelectorAll('li.test-item');
 
   testItemElements.forEach(testItemElement => {
     const testData = {};
-
-    // Extract basic test data
     testData.test_id = testItemElement.getAttribute('test-id');
     testData.name = testItemElement.querySelector('p.name').textContent.trim();
     testData.status = testItemElement.getAttribute('status');
     testData.timestamp = testItemElement.querySelector('p.text-sm span').textContent.trim();
     testData.duration = testItemElement.querySelectorAll('span')[1].textContent.trim();
 
-    // Extract event details
     const events = [];
     const eventRows = testItemElement.querySelectorAll('tr.event-row');
 
@@ -97,7 +97,6 @@ function parseHTMLContent(htmlContent) {
     testItems.push(testData);
   });
 
-  // Extract and validate the date from the h3 tags
   const dateRegex = /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) \d{1,2}, \d{4} \d{1,2}:\d{2}:\d{2} [ap]m$/i;
   const dateElements = doc.querySelectorAll('h3');
   let date = null;
@@ -110,6 +109,85 @@ function parseHTMLContent(htmlContent) {
   });
 
   return { tests: testItems, date: date };
+}
+
+// Protected Route Component
+function ProtectedRoute({ children }) {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
+  return user ? children : null;
+}
+
+// Navigation Component
+const Navigation = ({ user, logout }) => (
+  <nav className="vertical-nav">
+    <div className="nav-header">
+      <h1>Test Dashboard</h1>
+      <div className="user-info">
+        <span>Welcome, {user.name}</span>
+      </div>
+    </div>
+    <ul>
+      <li>
+        <Link to="/analytics">Home</Link>
+      </li>
+      <li>
+        <Link to="/code">Code</Link>
+      </li>
+      <li>
+        <Link to="/results">Results</Link>
+      </li>
+      <li>
+        <Link to="/statistics">Statistics</Link>
+      </li>
+    </ul>
+    <div className="logout-container">
+      <button onClick={logout} className="logout-btn">
+        Logout
+      </button>
+    </div>
+  </nav>
+);
+
+// Main Dashboard Component
+function Dashboard({ reports, testResults, javaCode, handleJavaFileChange, handleUploadButtonClick, uploadStatus, JSONContent }) {
+  const { user, logout } = useAuth();
+
+  return (
+    <div className="app-container">
+      <Navigation user={user} logout={logout} />
+      <main className="main-content">
+        <Routes>
+          <Route path="/" element={<Navigate to="/analytics" />} />
+          <Route path="/analytics" element={<AnalyticsPage testResults={JSONContent} />} />
+          <Route
+            path="/code"
+            element={
+              <CodePage
+                javaCode={javaCode}
+                handleJavaFileChange={handleJavaFileChange}
+                handleUploadButtonClick={handleUploadButtonClick}
+                uploadStatus={uploadStatus}
+              />
+            }
+          />
+          <Route path="/results" element={<ResultsPage testResults={testResults} reports={reports} />} />
+          <Route path="/statistics" element={<StatisticsPage testResults={testResults} />} />
+        </Routes>
+      </main>
+    </div>
+  );
 }
 
 function App() {
@@ -125,7 +203,12 @@ function App() {
   // Fetch test reports from the backend
   const fetchReports = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/all-reports');
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/all-reports', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Error fetching reports');
       const data = await response.json();
       const reportHtml = data.map((report) => report.content);
@@ -138,20 +221,28 @@ function App() {
   };
 
   const fetchJSONReports = async () => {
-  try{
-  const response = await fetch('http://localhost:5000/api/json-reports');
-  const data = await response.json();
-  //console.log(JSON.stringify(data, null, 2));
-  setJSONContent(data);
-    }  catch (error) {
-     setError(error.message);
-
-  }
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/json-reports', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setJSONContent(data);
+    } catch (error) {
+      setError(error.message);
+    }
   };
 
   const fetchTestResults = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/testResults');
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/testResults', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
       const data = await response.json();
       setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
@@ -165,7 +256,12 @@ function App() {
 
   const fetchJavaFiles = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/all-java-code');
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/all-java-code', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) throw new Error('Error fetching Java files');
       const data = await response.json();
       setJavaCode(data);
@@ -177,17 +273,18 @@ function App() {
   const handleJavaFileChange = async (e) => {
     const file = e.target.files[0];
     if (file && file.name.endsWith('.java')) {
-      console.log("File selected:", file.name);
-
-      // Create FormData and upload directly
       const formData = new FormData();
       formData.append('file', file);
 
       setUploadStatus('Uploading...');
 
       try {
+        const token = localStorage.getItem('token');
         const response = await fetch('http://localhost:5000/api/upload-code', {
           method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          },
           body: formData,
         });
 
@@ -197,8 +294,6 @@ function App() {
         }
 
         const result = await response.json();
-        console.log("Upload response:", result);
-
         setUploadStatus('Upload successful!');
         alert('Java file uploaded successfully!');
         document.getElementById('javaFileInput').value = '';
@@ -224,63 +319,36 @@ function App() {
     fetchJavaFiles();
     fetchJSONReports();
   }, []);
-  useEffect(() => {
-    console.log("Fetched JSON Reports:", JSONContent);
-  }, [JSONContent]);
 
   return (
-    <Router>
-      <div className="app-container">
-        <nav className="vertical-nav">
-          <div className="nav-header">
-            <h1>Test Dashboard</h1>
-          </div>
-          <ul>
-            <li>
-              <Link to="/analytics">Home</Link>
-            </li>
-            <li>
-              <Link to="/code">Code</Link>
-            </li>
-            <li>
-              <Link to="/results">Results</Link>
-            </li>
-            <li>
-              <Link to="/statistics">Statistics</Link>
-            </li>
-          </ul>
-        </nav>
-
-        <main className="main-content">
+    <AuthProvider>
+      <Router>
+        <div className="app-wrapper">
           {error && <div className="error-message">Error: {error}</div>}
-
-          {loading ? (
-            <div className="loading">Loading...</div>
-          ) : (
-            <Routes>
-              <Route path="/" element={<Navigate to="/analytics" />} />
-              <Route path="/analytics" element={<AnalyticsPage testResults={JSONContent} />} />
-              <Route
-                path="/code"
-                element={
-                  <CodePage
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <Dashboard
+                    reports={reports}
+                    testResults={testResults}
                     javaCode={javaCode}
                     handleJavaFileChange={handleJavaFileChange}
                     handleUploadButtonClick={handleUploadButtonClick}
                     uploadStatus={uploadStatus}
+                    JSONContent={JSONContent}
                   />
-                }
-              />
-              <Route path="/results" element={<ResultsPage testResults={testResults} reports={reports} />} />
-              <Route path="/statistics" element={<StatisticsPage testResults={reportContent} />} />
-            </Routes>
-          )}
-        </main>
-      </div>
-    </Router>
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 
-
 export default App;
-
