@@ -136,9 +136,6 @@ const Navigation = ({ user, logout }) => (
       <h1>Test Dashboard</h1>
       <div className="user-info">
         <span>Welcome, {user.name}</span>
-        <button onClick={logout} className="logout-btn">
-          Logout
-        </button>
       </div>
     </div>
     <ul>
@@ -155,6 +152,11 @@ const Navigation = ({ user, logout }) => (
         <Link to="/statistics">Statistics</Link>
       </li>
     </ul>
+    <div className="logout-container">
+      <button onClick={logout} className="logout-btn">
+        Logout
+      </button>
+    </div>
   </nav>
 );
 
