@@ -2,103 +2,129 @@ pipeline {
     agent any
 
     environment {
-        // Define the directory where the app is located
+        KUBECONFIG = credentials('kubeconfig-file-id')
         APP_DIR = 'test/React/my-react-app'
-        SELENIUM_SERVER_JAR = 'test/test/selenium-server-4.26.0.jar' // Update this path
-        SELENIUM_GRID_URL = 'http://localhost:4444/wd/hub'  // URL to access the Selenium Grid
-        BROWSER_CHROME = 'chrome'
-        BROWSER_FIREFOX = 'firefox'
-        BROWSER_EDGE = 'MicrosoftEdge'
+        K8S_NAMESPACE = 'default'
+        DEPLOYMENT_FILES = "test/selenium-hub.yaml,test/selenium-hub-service.yaml,test/selenium-node-chrome-deployment.yaml,test/selenium-node-edge-deployment.yaml,test/selenium-node-firefox-deployment.yaml"
+        TEST_DIR = 'test/test'
+        HUB_HEALTH_CHECK = "http://localhost:4444/wd/hub/status"
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the source code from the repository
                 checkout scm
             }
         }
 
         stage('Install Dependencies') {
-            steps {
-                script {
-                    // Navigate to the app directory and install npm dependencies
-                    dir(APP_DIR) {
-                        bat 'npm install'
+            parallel {
+                stage('React Dependencies') {
+                    steps {
+                        dir(APP_DIR) {
+                            bat 'npm install'
+                        }
+                    }
+                }
+                stage('Java Dependencies') {
+                    steps {
+                        dir(TEST_DIR) {
+                            bat 'mvn clean install -DskipTests'
+                        }
                     }
                 }
             }
         }
 
-        stage('Start Development Server') {
+        stage('Deploy Selenium Grid') {
             steps {
                 script {
-                    // Run npm run dev in the background to start the development server
+                    // Apply Selenium Hub first
+                    bat "kubectl apply -f test/selenium-hub.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl apply -f test/selenium-hub-service.yaml --namespace=${K8S_NAMESPACE}"
+
+                    // Wait for Hub to be ready
+                    bat "kubectl wait --for=condition=ready pod -l app=selenium-hub --timeout=120s --namespace=${K8S_NAMESPACE}"
+
+                    // Deploy browser nodes
+                    bat "kubectl apply -f test/selenium-node-chrome-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl apply -f test/selenium-node-edge-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl apply -f test/selenium-node-firefox-deployment.yaml --namespace=${K8S_NAMESPACE}"
+
+                    // Wait for all nodes to be ready
+                    bat "kubectl wait --for=condition=ready pod -l app=selenium-node-chrome --timeout=120s --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl wait --for=condition=ready pod -l app=selenium-node-edge --timeout=120s --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl wait --for=condition=ready pod -l app=selenium-node-firefox --timeout=120s --namespace=${K8S_NAMESPACE}"
+
+                    // Port forward Selenium Hub
+                    bat "start /B kubectl port-forward service/selenium-hub 4444:4444 --namespace=${K8S_NAMESPACE}"
+
+                    // Wait for Hub to be accessible
+                    sleep(30)
+                }
+            }
+        }
+
+        stage('Start React Development Server') {
+            steps {
+                script {
                     dir(APP_DIR) {
                         bat 'start /B npm run dev'
+                        sleep 15 // Wait for server to start
                     }
                 }
             }
         }
 
-        stage('Start Selenium Server') {
+        stage('Run Tests') {
             steps {
                 script {
-                    // Start the Selenium server in the background
-                    bat "start /B java -jar ${SELENIUM_SERVER_JAR} standalone"
-                }
-            }
-        }
-
-        stage('Run Tests on Chrome') {
-            steps {
-                script {
-                    // Run your tests on Chrome using Selenium WebDriver
-                    echo "Running tests on Chrome"
-                    bat """
-                    mvn clean test -Dbrowser=${BROWSER_CHROME} -Dselenium.url=${SELENIUM_GRID_URL}
-                    """
-                }
-            }
-        }
-
-        stage('Run Tests on Firefox') {
-            steps {
-                script {
-                    // Run your tests on Firefox using Selenium WebDriver
-                    echo "Running tests on Firefox"
-                    bat """
-                    mvn clean test -Dbrowser=${BROWSER_FIREFOX} -Dselenium.url=${SELENIUM_GRID_URL}
-                    """
-                }
-            }
-        }
-
-        stage('Run Tests on Edge') {
-            steps {
-                script {
-                    // Run your tests on Edge using Selenium WebDriver
-                    echo "Running tests on Microsoft Edge"
-                    bat """
-                    mvn clean test -Dbrowser=${BROWSER_EDGE} -Dselenium.url=${SELENIUM_GRID_URL}
-                    """
+                    parallel(
+                        chrome: {
+                            dir(TEST_DIR) {
+                                bat 'mvn exec:java -Dexec.mainClass="com.test.test.OpenYouTubeTestChrome" -Dbrowser=chrome'
+                            }
+                        },
+                        firefox: {
+                            dir(TEST_DIR) {
+                                bat 'mvn exec:java -Dexec.mainClass="com.test.test.OpenYouTubeTestFirefox" -Dbrowser=firefox'
+                            }
+                        },
+                        edge: {
+                            dir(TEST_DIR) {
+                                bat 'mvn exec:java -Dexec.mainClass="com.test.test.OpenYouTubeTestEdge" -Dbrowser=edge'
+                            }
+                        },
+                        failFast: true
+                    )
                 }
             }
         }
     }
 
     post {
-        success {
-            echo 'Development server, Selenium server, and tests executed successfully.'
-        }
-        failure {
-            echo 'Failed to start the servers or run tests.'
-        }
         always {
             script {
-                // Cleanup to ensure processes are terminated
-                bat 'taskkill /F /IM node.exe'    // Stop the React development server
-                bat 'taskkill /F /IM java.exe'    // Stop the Selenium server
+                try {
+                    // Stop the React development server
+                    bat 'taskkill /F /IM node.exe'
+                } catch (Exception e) {
+                    echo "Error stopping React server: ${e.getMessage()}"
+                }
+
+                try {
+                    // Kill port-forward process
+                    bat 'for /f "tokens=5" %a in (\'netstat -aon ^| find "4444"\') do taskkill /F /PID %a'
+
+                    // Clean up Kubernetes resources
+                    bat "kubectl delete -f test/selenium-hub.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-hub-service.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-node-chrome-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-node-edge-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                    bat "kubectl delete -f test/selenium-node-firefox-deployment.yaml --namespace=${K8S_NAMESPACE}"
+                } catch (Exception e) {
+                    echo "Error cleaning up Kubernetes resources: ${e.getMessage()}"
+                }
             }
         }
     }

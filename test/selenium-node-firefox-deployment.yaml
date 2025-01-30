@@ -14,6 +14,7 @@ spec:
       labels:
         app: selenium-node-firefox
     spec:
+      terminationGracePeriodSeconds: 10
       containers:
         - name: selenium-node-firefox
           image: selenium/node-firefox:latest
