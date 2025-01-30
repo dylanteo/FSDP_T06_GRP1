@@ -20,7 +20,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use('/api', authRouter);
-app.use('/api', authMiddleware);
+//app.use('/api', authMiddleware);
 app.use((req, res, next) => {
   req.user = { role: 'admin', permissions: ['*'] }; // Mock an "authorized" user with full access
   next();
@@ -283,23 +283,127 @@ async function readJSONReport(repoRoot) {
  * Helper to send the test report via email.
  */
 async function sendReportEmail(recipientEmail, reportContent, filename) {
+  // Parse the JSON content
+  const report = JSON.parse(reportContent);
+
+  // Generate status summary
+  const totalTests = report.testResults.length;
+  const passedTests = report.testResults.filter(test => test.status === 'pass').length;
+  const failedTests = report.testResults.filter(test => test.status === 'fail').length;
+
+  // Calculate success rate
+  const successRate = ((passedTests / totalTests) * 100).toFixed(1);
+
+  // Format duration to be more readable
+  const formatDuration = (ms) => {
+    const seconds = (ms / 1000).toFixed(2);
+    return `${seconds}s`;
+  };
+
+  // Format timestamp to be more readable
+  const formatTimestamp = (timestamp) => {
+    return new Date(timestamp).toLocaleString();
+  };
+
+  // Generate the HTML content
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
+        .summary { display: flex; justify-content: space-between; margin-bottom: 20px; }
+        .summary-box {
+          padding: 15px;
+          border-radius: 5px;
+          text-align: center;
+          flex: 1;
+          margin: 0 10px;
+        }
+        .test-case {
+          background-color: #fff;
+          border: 1px solid #ddd;
+          border-radius: 5px;
+          padding: 15px;
+          margin-bottom: 15px;
+        }
+        .pass { color: #28a745; }
+        .fail { color: #dc3545; }
+        .info { color: #17a2b8; }
+        .steps { margin-left: 20px; }
+        .step { margin: 10px 0; }
+        .timestamp { color: #666; font-size: 0.9em; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h2>Test Execution Report - ${report.testName}</h2>
+          <p>Report generated at: ${new Date().toLocaleString()}</p>
+        </div>
+
+        <div class="summary">
+          <div class="summary-box" style="background-color: #e8f5e9;">
+            <h3>Total Tests</h3>
+            <p style="font-size: 24px;">${totalTests}</p>
+          </div>
+          <div class="summary-box" style="background-color: #e3f2fd;">
+            <h3>Success Rate</h3>
+            <p style="font-size: 24px;">${successRate}%</p>
+          </div>
+          <div class="summary-box" style="background-color: #e8f5e9;">
+            <h3>Passed</h3>
+            <p style="font-size: 24px;" class="pass">${passedTests}</p>
+          </div>
+          <div class="summary-box" style="background-color: #ffebee;">
+            <h3>Failed</h3>
+            <p style="font-size: 24px;" class="fail">${failedTests}</p>
+          </div>
+        </div>
+
+        <h3>Test Cases Details</h3>
+        ${report.testResults.map(test => `
+          <div class="test-case">
+            <h4>${test.testName} <span class="${test.status}">[${test.status.toUpperCase()}]</span></h4>
+            <p>
+              <strong>Browser:</strong> ${test.browser} |
+              <strong>Duration:</strong> ${formatDuration(test.duration)} |
+              <strong>Thread:</strong> ${test.threadName}
+            </p>
+            <p><strong>Test Steps:</strong></p>
+            <div class="steps">
+              ${test.steps.map(step => `
+                <div class="step">
+                  <strong class="${step.status}">${step.name}</strong>: ${step.message}
+                  <div class="timestamp">${formatTimestamp(step.timestamp)}</div>
+                </div>
+              `).join('')}
+            </div>
+            ${test.error ? `
+              <p class="fail">
+                <strong>Error:</strong><br>
+                <pre style="white-space: pre-wrap;">${test.error}</pre>
+              </p>
+            ` : ''}
+          </div>
+        `).join('')}
+      </div>
+    </body>
+    </html>
+  `;
+
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: recipientEmail,
-    subject: `Test Report for ${filename}`,
-    html: `
-      <h2>Test Execution Report</h2>
-      <p>Please find attached the test execution report for ${filename}.</p>
-      <p>Report generated at: ${new Date().toLocaleString()}</p>
-    `,
-    attachments: [
-      {
-        filename: 'TestReport.html',
-        content: reportContent
-      }
-    ]
+    subject: `Test Report: ${report.testName} - Success Rate: ${successRate}%`,
+    html: htmlContent,
+    attachments: [{
+      filename: 'TestReport.json',
+      content: reportContent
+    }]
   };
-
   try {
     await transporter.sendMail(mailOptions);
     console.log('Report email sent successfully');
