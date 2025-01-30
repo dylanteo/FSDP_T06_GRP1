@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ScheduleManager from './ScheduleManager';
 
 const CodeTable = ({ javaCode }) => {
   // ---------------------------
@@ -9,6 +10,7 @@ const CodeTable = ({ javaCode }) => {
   const [isExecuting, setIsExecuting] = useState(false);
   const [scheduledTimes, setScheduledTimes] = useState({});
   const [selectedDateTime, setSelectedDateTime] = useState('');
+  const [showScheduleManager, setShowScheduleManager] = useState(false);
 
   // Filter input state
   const [filterText, setFilterText] = useState('');
@@ -291,6 +293,13 @@ const CodeTable = ({ javaCode }) => {
             ? `Schedule Selected (${selectedFiles.size})`
             : `Run Selected (${selectedFiles.size})`}
         </button>
+        <button
+          className="button button-secondary"
+          disabled={selectedFiles.size === 0}
+          onClick={() => setShowScheduleManager(true)}
+        >
+          Schedule Selected
+        </button>
       </div>
 
       {/* Table Container */}
@@ -398,6 +407,12 @@ const CodeTable = ({ javaCode }) => {
             </div>
           </div>
         </div>
+      )}
+      {showScheduleManager && (
+        <ScheduleManager
+          selectedFiles={Array.from(selectedFiles)}
+          onClose={() => setShowScheduleManager(false)}
+        />
       )}
     </div>
   );

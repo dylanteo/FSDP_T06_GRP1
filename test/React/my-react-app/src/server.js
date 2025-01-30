@@ -1,5 +1,5 @@
 // server.js
-
+const cron = require('node-cron');
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -29,6 +29,16 @@ app.use((req, res, next) => {
 // 1. TestCounter logic inlined
 // ==============================
 const fsPromises = fs.promises;
+
+const scheduleSchema = {
+  type: String,  // 'daily' or 'monthly'
+  time: String,  // HH:mm format
+  dayOfMonth: Number,  // 1-31, only used for monthly
+  email: String,
+  selectedFiles: [String],
+  active: Boolean,
+  lastModified: Date
+};
 
 /**
  * Count test cases by browser from a given Java file with a @DataProvider.
@@ -154,6 +164,7 @@ client.connect()
   .then(() => {
     db = client.db(dbName);
     console.log('Connected to MongoDB');
+    return initializeSchedules();
   })
   .catch((err) => {
     console.error('Error connecting to MongoDB:', err);
@@ -255,7 +266,108 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   }
 });
+function setupScheduledJob(schedule) {
+  let cronExpression;
 
+  if (schedule.type === 'daily') {
+    const [hours, minutes] = schedule.time.split(':');
+    cronExpression = `${minutes} ${hours} * * *`;
+  } else if (schedule.type === 'monthly') {
+    const [hours, minutes] = schedule.time.split(':');
+    cronExpression = `${minutes} ${hours} ${schedule.dayOfMonth} * *`;
+  }
+
+  console.log(`Setting up ${schedule.type} schedule for ${schedule.email} at ${schedule.time}`);
+  console.log(`Cron expression: ${cronExpression}`);
+  console.log(`Selected files: ${schedule.selectedFiles.join(', ')}`);
+
+  const job = cron.schedule(cronExpression, async () => {
+    console.log(`Running scheduled tests for schedule ${schedule._id}:`, new Date());
+    console.log(`Files to process: ${schedule.selectedFiles.join(', ')}`);
+
+    try {
+      // Run each selected file
+      for (const filename of schedule.selectedFiles) {
+        console.log(`Processing file: ${filename}`);
+
+        // Get the file content from the database
+        const javaFilesCollection = db.collection('javaTestCodes');
+        const fileDoc = await javaFilesCollection.findOne({ filename });
+
+        if (!fileDoc) {
+          console.error(`File not found in database: ${filename}`);
+          continue;
+        }
+
+        // Create form data for the file
+        const formData = new FormData();
+        const blob = new Blob([fileDoc.content], { type: 'text/x-java' });
+        formData.append('file', blob, filename);
+        formData.append('email', schedule.email);
+
+        // Execute the test
+        const response = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to execute test for ${filename}: ${response.statusText}`);
+        }
+
+        console.log(`Successfully executed test for ${filename}`);
+      }
+
+      console.log(`Completed scheduled execution for schedule ${schedule._id}`);
+    } catch (error) {
+      console.error(`Error in scheduled job for schedule ${schedule._id}:`, error);
+      // You might want to send an email notification about the failure
+    }
+  });
+
+  return job;
+}
+
+const activeJobs = new Map();
+
+async function initializeSchedules() {
+  if (!db) {
+    console.error('Cannot initialize schedules: Database not connected');
+    return;
+  }
+
+  try {
+    console.log('Starting to initialize schedules...');
+    const schedulesCollection = db.collection('schedules');
+    const activeSchedules = await schedulesCollection.find({ active: true }).toArray();
+
+    console.log(`Found ${activeSchedules.length} active schedules`);
+
+    // Clear any existing jobs
+    for (const [scheduleId, job] of activeJobs.entries()) {
+      console.log(`Stopping existing job for schedule ${scheduleId}`);
+      job.stop();
+    }
+    activeJobs.clear();
+
+    // Set up new jobs for each active schedule
+    for (const schedule of activeSchedules) {
+      console.log(`Initializing schedule ${schedule._id}:`);
+      console.log(`- Type: ${schedule.type}`);
+      console.log(`- Time: ${schedule.time}`);
+      console.log(`- Email: ${schedule.email}`);
+      console.log(`- Files: ${schedule.selectedFiles.join(', ')}`);
+
+      const job = setupScheduledJob(schedule);
+      activeJobs.set(schedule._id.toString(), job);
+    }
+
+    console.log('Schedule initialization completed');
+    console.log(`Total active jobs: ${activeJobs.size}`);
+  } catch (error) {
+    console.error('Error initializing schedules:', error);
+  }
+}
 /**
  * Helper to read JSON test report from a known location.
  */
@@ -479,6 +591,7 @@ async function saveJavaFileToDB(file, fileContent) {
   }
   return javaFilesCollection.insertOne(javaFileDocument);
 }
+
 
 /**
  * Save JSON test report to MongoDB.
@@ -729,6 +842,184 @@ app.get('/api/json-reports', async (req, res) => {
     console.error('Error fetching JSON reports:', err);
     res.status(500).json({
       error: 'Error fetching reports.',
+      details: err.message
+    });
+  }
+});
+app.get('/api/schedule', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+  try {
+    const schedulesCollection = db.collection('schedules');
+    const currentSchedule = await schedulesCollection.findOne({ active: true });
+    res.json(currentSchedule || null);
+  } catch (err) {
+    console.error('Error fetching schedule:', err);
+    res.status(500).json({
+      error: 'Error fetching schedule',
+      details: err.message
+    });
+  }
+});
+
+// Create or update schedule
+// Replace the POST /api/schedule endpoint in server.js with this implementation:
+
+app.post('/api/schedule', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+
+  const { type, time, dayOfMonth, email, selectedFiles } = req.body;
+
+  // Validation
+  if (!type || !time || !email || !selectedFiles || !selectedFiles.length) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  if (type === 'monthly' && (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31)) {
+    return res.status(400).json({ error: 'Invalid day of month' });
+  }
+
+  try {
+    const schedulesCollection = db.collection('schedules');
+
+    // Deactivate any existing schedule
+    await schedulesCollection.updateMany(
+      { active: true },
+      { $set: { active: false } }
+    );
+
+    // Create new schedule
+    const newSchedule = {
+      type,
+      time,
+      dayOfMonth: type === 'monthly' ? dayOfMonth : null,
+      email,
+      selectedFiles,
+      active: true,
+      lastModified: new Date()
+    };
+
+    const result = await schedulesCollection.insertOne(newSchedule);
+
+    // Immediately execute the tests
+    console.log('Executing scheduled tests immediately:', new Date());
+
+    try {
+      // Run each selected file
+      for (const filename of selectedFiles) {
+        // Get the file content from the database
+        const javaFilesCollection = db.collection('javaTestCodes');
+        const fileDoc = await javaFilesCollection.findOne({ filename });
+
+        if (!fileDoc) {
+          console.error(`File not found: ${filename}`);
+          continue;
+        }
+
+        // Create form data for the file
+        const formData = new FormData();
+        const blob = new Blob([fileDoc.content], { type: 'text/x-java' });
+        formData.append('file', blob, filename);
+        formData.append('email', email);
+
+        // Execute the test
+        const response = await fetch('http://localhost:5000/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to execute test for ${filename}`);
+        }
+
+        console.log(`Successfully executed test for ${filename}`);
+      }
+
+      // After successful execution, update the schedule
+      await schedulesCollection.updateOne(
+        { _id: result.insertedId },
+        {
+          $set: {
+            executedAt: new Date(),
+            executionStatus: 'completed'
+          }
+        }
+      );
+
+      res.json({
+        success: true,
+        message: 'Schedule created and tests executed successfully',
+        schedule: {
+          ...newSchedule,
+          _id: result.insertedId,
+          executedAt: new Date(),
+          executionStatus: 'completed'
+        }
+      });
+
+    } catch (err) {
+      console.error('Error executing scheduled tests:', err);
+
+      // Update schedule with error status
+      await schedulesCollection.updateOne(
+        { _id: result.insertedId },
+        {
+          $set: {
+            active: false,
+            executedAt: new Date(),
+            executionStatus: 'error',
+            errorMessage: err.message
+          }
+        }
+      );
+
+      res.status(500).json({
+        error: 'Error executing scheduled tests',
+        details: err.message,
+        schedule: {
+          ...newSchedule,
+          _id: result.insertedId,
+          executionStatus: 'error'
+        }
+      });
+    }
+
+  } catch (err) {
+    console.error('Error creating schedule:', err);
+    res.status(500).json({
+      error: 'Error creating schedule',
+      details: err.message
+    });
+  }
+});
+
+// Delete schedule
+app.delete('/api/schedule/:id', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ error: 'Database not connected' });
+  }
+
+  try {
+    const schedulesCollection = db.collection('schedules');
+    const result = await schedulesCollection.deleteOne({
+      _id: new MongoClient.ObjectId(req.params.id)
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Schedule not found' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Schedule deleted successfully'
+    });
+  } catch (err) {
+    console.error('Error deleting schedule:', err);
+    res.status(500).json({
+      error: 'Error deleting schedule',
       details: err.message
     });
   }
