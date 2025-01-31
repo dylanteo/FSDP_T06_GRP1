@@ -145,12 +145,6 @@ const Navigation = ({ user, logout }) => (
       <li>
         <Link to="/code">Code</Link>
       </li>
-      <li>
-        <Link to="/results">Results</Link>
-      </li>
-      <li>
-        <Link to="/statistics">Statistics</Link>
-      </li>
     </ul>
     <div className="logout-container">
       <button onClick={logout} className="logout-btn">

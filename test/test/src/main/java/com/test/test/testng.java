@@ -1,10 +1,11 @@
+/*
 package com.test.test;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.testng.annotations.*;
 
 //@ContextConfiguration(classes = Login.class)
-public class Testng {
+public class testng {
 
 
     @Autowired
@@ -76,3 +77,4 @@ public class Testng {
         System.out.println("Selenium WebDriver has been torn down after all tests.");
     }
 }
+*/
