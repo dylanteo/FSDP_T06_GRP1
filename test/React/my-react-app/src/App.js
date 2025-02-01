@@ -133,7 +133,7 @@ function ProtectedRoute({ children }) {
 const Navigation = ({ user, logout }) => (
   <nav className="vertical-nav">
     <div className="nav-header">
-      <h1>Test Dashboard</h1>
+      <h1><strong>TestFlow</strong></h1>
       <div className="user-info">
         <span>Welcome, {user.name}</span>
       </div>
@@ -155,8 +155,94 @@ const Navigation = ({ user, logout }) => (
 );
 
 // Main Dashboard Component
-function Dashboard({ reports, testResults, javaCode, handleJavaFileChange, handleUploadButtonClick, uploadStatus, JSONContent }) {
+function Dashboard({ handleJavaFileChange, handleUploadButtonClick }) {
   const { user, logout } = useAuth();
+  const [reports, setReports] = useState([]);
+  const [reportContent, setReportContent] = useState([]);
+  const [JSONContent, setJSONContent] = useState([]);
+  const [testResults, setTestResults] = useState([]);
+  const [javaCode, setJavaCode] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState(null);
+
+  const fetchReports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/all-reports', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error('Error fetching reports');
+      const data = await response.json();
+      const reportHtml = data.map((report) => report.content);
+      const parsedReports = reportHtml.map(parseHTMLContent);
+      setReportContent(parsedReports);
+      setReports(data);
+    } catch (error) {
+      console.log('Error fetching reports:', error);
+    }
+  };
+
+  const fetchJSONReports = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/json-reports', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setJSONContent(data);
+    } catch (error) {
+      console.log('Error fetching JSON reports:', error);
+    }
+  };
+
+  const fetchTestResults = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/testResults', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
+      const data = await response.json();
+      setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
+    } catch (error) {
+      console.log('Error fetching test results:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchJavaFiles = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:5000/api/all-java-code', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!response.ok) return;
+      const data = await response.json();
+      setJavaCode(data);
+    } catch (error) {
+      console.log('Error fetching Java files:', error);
+    }
+  };
+
+  useEffect(() => {
+    // Only fetch data if user is logged in
+    if (user) {
+      fetchReports();
+      fetchTestResults();
+      fetchJavaFiles();
+      fetchJSONReports();
+    }
+  }, [user]); // Add user as dependency
 
   return (
     <div className="app-container">
@@ -185,84 +271,7 @@ function Dashboard({ reports, testResults, javaCode, handleJavaFileChange, handl
 }
 
 function App() {
-  const [reports, setReports] = useState([]);
-  const [reportContent, setReportContent] = useState([]);
-  const [JSONContent, setJSONContent] = useState([]);
-  const [testResults, setTestResults] = useState([]);
-  const [javaCode, setJavaCode] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [uploadStatus, setUploadStatus] = useState(null);
-
-  // Fetch test reports from the backend
-  const fetchReports = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/all-reports', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) throw new Error('Error fetching reports');
-      const data = await response.json();
-      const reportHtml = data.map((report) => report.content);
-      const parsedReports = reportHtml.map(parseHTMLContent);
-      setReportContent(parsedReports);
-      setReports(data);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  const fetchJSONReports = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/json-reports', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      setJSONContent(data);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
-
-  const fetchTestResults = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/testResults', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) throw new Error(`Error fetching test results: ${response.statusText}`);
-      const data = await response.json();
-      setTestResults(data.map((result, index) => ({ ...result, testCaseId: index + 1 })));
-      setError(null);
-    } catch (error) {
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchJavaFiles = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/all-java-code', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) throw new Error('Error fetching Java files');
-      const data = await response.json();
-      setJavaCode(data);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
 
   const handleJavaFileChange = async (e) => {
     const file = e.target.files[0];
@@ -291,7 +300,6 @@ function App() {
         setUploadStatus('Upload successful!');
         alert('Java file uploaded successfully!');
         document.getElementById('javaFileInput').value = '';
-        fetchJavaFiles();
       } catch (error) {
         console.error("Upload error:", error);
         setUploadStatus(`Error uploading file: ${error.message}`);
@@ -307,18 +315,10 @@ function App() {
     document.getElementById('javaFileInput').click();
   };
 
-  useEffect(() => {
-    fetchReports();
-    fetchTestResults();
-    fetchJavaFiles();
-    fetchJSONReports();
-  }, []);
-
   return (
     <AuthProvider>
       <Router>
         <div className="app-wrapper">
-          {error && <div className="error-message">Error: {error}</div>}
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -327,13 +327,9 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Dashboard
-                    reports={reports}
-                    testResults={testResults}
-                    javaCode={javaCode}
                     handleJavaFileChange={handleJavaFileChange}
                     handleUploadButtonClick={handleUploadButtonClick}
                     uploadStatus={uploadStatus}
-                    JSONContent={JSONContent}
                   />
                 </ProtectedRoute>
               }
