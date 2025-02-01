@@ -290,15 +290,15 @@ const CodeTable = ({ javaCode }) => {
           {isExecuting
             ? 'Executing...'
             : runMode === 'scheduled'
-            ? `Schedule Selected (${selectedFiles.size})`
+            ? ` (${selectedFiles.size})`
             : `Run Selected (${selectedFiles.size})`}
         </button>
         <button
-          className="button button-secondary"
+          className="run-selected-btn"
           disabled={selectedFiles.size === 0}
           onClick={() => setShowScheduleManager(true)}
         >
-          Schedule Selected
+          Schedule recurring  Test
         </button>
       </div>
 
