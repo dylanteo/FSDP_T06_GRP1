@@ -345,6 +345,7 @@ th {
 }
 
 .nav-header {
+  text-align: center;
   padding: 0 20px 20px;
   border-bottom: 1px solid #34495e;
 }
