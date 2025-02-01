@@ -298,7 +298,7 @@ const CodeTable = ({ javaCode }) => {
           disabled={selectedFiles.size === 0}
           onClick={() => setShowScheduleManager(true)}
         >
-          Schedule recurring  Test
+          Schedule Recurring Test
         </button>
       </div>
 
