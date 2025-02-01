@@ -624,15 +624,11 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   const repoRoot = path.join(__dirname, '..', '..', '..', '..');
 
   try {
-    // 1. Compile and run
-    console.log('Compiling and running test with Maven...');
-    await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
-
-    // 2. Count test cases
+    // 1. Count test cases
     const browserCounts = await countTestCasesByBrowser(uploadedFilePath);
     console.log(`Test case counts by browser: ${JSON.stringify(browserCounts, null, 2)}`);
 
-    // 3. Update & apply K8s
+    // 2. Update & apply K8s
     const deploymentDir = path.join(__dirname, '..', '..', '..');
     const deploymentPaths = {
       chrome: path.join(deploymentDir, "selenium-node-chrome-deployment.yaml"),
@@ -653,6 +649,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       }
     });
     await Promise.all(updateAndApplyPromises);
+
+    console.log('Compiling and running test with Maven...');
+    await compileAndRunJavaFileWithMaven(uploadedFilePath, testClassName);
+
 
     // 4. Read JSON report
     const reportPath = path.join(repoRoot, 'test', 'test', 'test-results.json');
