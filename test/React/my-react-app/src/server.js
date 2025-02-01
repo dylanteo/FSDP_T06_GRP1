@@ -913,88 +913,18 @@ app.post('/api/schedule', async (req, res) => {
 
     const result = await schedulesCollection.insertOne(newSchedule);
 
-    // Immediately execute the tests
-    console.log('Executing scheduled tests immediately:', new Date());
+    // Set up the scheduled job
+    const job = setupScheduledJob(newSchedule);
+    activeJobs.set(result.insertedId.toString(), job);
 
-    try {
-      // Run each selected file
-      for (const filename of selectedFiles) {
-        // Get the file content from the database
-        const javaFilesCollection = db.collection('javaTestCodes');
-        const fileDoc = await javaFilesCollection.findOne({ filename });
-
-        if (!fileDoc) {
-          console.error(`File not found: ${filename}`);
-          continue;
-        }
-
-        // Create form data for the file
-        const formData = new FormData();
-        const blob = new Blob([fileDoc.content], { type: 'text/x-java' });
-        formData.append('file', blob, filename);
-        formData.append('email', email);
-
-        // Execute the test
-        const response = await fetch('http://localhost:5000/api/upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to execute test for ${filename}`);
-        }
-
-        console.log(`Successfully executed test for ${filename}`);
+    res.json({
+      success: true,
+      message: 'Schedule created successfully',
+      schedule: {
+        ...newSchedule,
+        _id: result.insertedId
       }
-
-      // After successful execution, update the schedule
-      await schedulesCollection.updateOne(
-        { _id: result.insertedId },
-        {
-          $set: {
-            executedAt: new Date(),
-            executionStatus: 'completed'
-          }
-        }
-      );
-
-      res.json({
-        success: true,
-        message: 'Schedule created and tests executed successfully',
-        schedule: {
-          ...newSchedule,
-          _id: result.insertedId,
-          executedAt: new Date(),
-          executionStatus: 'completed'
-        }
-      });
-
-    } catch (err) {
-      console.error('Error executing scheduled tests:', err);
-
-      // Update schedule with error status
-      await schedulesCollection.updateOne(
-        { _id: result.insertedId },
-        {
-          $set: {
-            active: false,
-            executedAt: new Date(),
-            executionStatus: 'error',
-            errorMessage: err.message
-          }
-        }
-      );
-
-      res.status(500).json({
-        error: 'Error executing scheduled tests',
-        details: err.message,
-        schedule: {
-          ...newSchedule,
-          _id: result.insertedId,
-          executionStatus: 'error'
-        }
-      });
-    }
+    });
 
   } catch (err) {
     console.error('Error creating schedule:', err);
