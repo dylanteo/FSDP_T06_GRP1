@@ -133,17 +133,17 @@ function ProtectedRoute({ children }) {
 const Navigation = ({ user, logout }) => (
   <nav className="vertical-nav">
     <div className="nav-header">
-      <h1><strong>TestFlow</strong></h1>
+      <h1><strong>OCBC</strong></h1>
       <div className="user-info">
         <span>Welcome, {user.name}</span>
       </div>
     </div>
     <ul>
       <li>
-        <Link to="/analytics">Home</Link>
+        <Link to="/analytics">Test Analytics</Link>
       </li>
       <li>
-        <Link to="/code">Code</Link>
+        <Link to="/code">Code Bank</Link>
       </li>
     </ul>
     <div className="logout-container">
